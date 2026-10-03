@@ -1,6 +1,7 @@
 ---
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+import { SITE_TITLE, SITE_DESCRIPTION } from '../consts';
 import '../styles/global.css';
 
 interface Props {
@@ -8,7 +9,13 @@ interface Props {
   description?: string;
 }
 
-const { title = '极简博客', description = '一个克制、纯粹的个人博客。' } = Astro.props;
+const { title, description = SITE_DESCRIPTION } = Astro.props;
+
+// 排除首页或未传标题时直接显示品牌名，其他页面显示 "页面名 · Bao's Paper"
+const pageTitle =
+  !title || title === '首页' || title === SITE_TITLE
+    ? SITE_TITLE
+    : `${title} | ${SITE_TITLE}`;
 ---
 
 <!doctype html>
@@ -19,7 +26,7 @@ const { title = '极简博客', description = '一个克制、纯粹的个人博
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="generator" content={Astro.generator} />
     <meta name="description" content={description} />
-    <title>{title === '极简博客' ? title : `${title} · 极简博客`}</title>
+    <title>{pageTitle}</title>
 
     <script is:inline>
       const theme = (() => {
@@ -35,7 +42,7 @@ const { title = '极简博客', description = '一个克制、纯粹的个人博
     </script>
   </head>
   <body>
-    <Header />
+    <Header siteTitle={SITE_TITLE} />
     <main class="container main-content">
       <slot />
     </main>

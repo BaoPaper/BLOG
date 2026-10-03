@@ -1,11 +1,12 @@
 ---
 import ThemeToggle from './ThemeToggle.astro';
+import { SITE_TITLE } from '../consts';
 
 interface Props {
   siteTitle?: string;
 }
 
-const { siteTitle = '极简博客' } = Astro.props;
+const { siteTitle = SITE_TITLE } = Astro.props;
 
 const pathname = Astro.url.pathname;
 const isCurrent = (path: string) => {

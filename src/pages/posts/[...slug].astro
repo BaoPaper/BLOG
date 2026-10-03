@@ -16,16 +16,42 @@ const { Content } = await render(post);
 const formatDate = (date: Date) => {
   return date.toISOString().split('T')[0];
 };
+
+const getWordCount = (content: string = '') => {
+  const clean = content.replace(/^---[\s\S]*?---/, '');
+  const chineseChars = clean.match(/[\u4e00-\u9fa5]/g) || [];
+  const englishWords = clean
+    .replace(/[\u4e00-\u9fa5]/g, ' ')
+    .replace(/[#*`~>_[\]()!+-=]/g, ' ')
+    .match(/[a-zA-Z0-9_-]+/g) || [];
+  return chineseChars.length + englishWords.length;
+};
+
+// 优先使用 frontmatter 中显式声明的静态字数；若未指定则在构建阶段静态估算，客户端 0 JS 运行
+const wordCount = post.data.words ?? getWordCount(post.body);
 ---
 
 <BaseLayout title={post.data.title} description={post.data.description}>
   <article class="post-article">
     <header class="article-header">
       <h1 class="article-title">{post.data.title}</h1>
+      {
+        post.data.description && (
+          <p class="article-subtitle">{post.data.description}</p>
+        )
+      }
       <div class="article-meta">
         <time datetime={post.data.pubDate.toISOString()}>
           {formatDate(post.data.pubDate)}
         </time>
+        {
+          wordCount !== undefined && (
+            <>
+              <span class="meta-dot">·</span>
+              <span>{wordCount.toLocaleString()} 字</span>
+            </>
+          )
+        }
       </div>
     </header>
 
@@ -46,13 +72,27 @@ const formatDate = (date: Date) => {
     font-size: 1.8rem;
     font-weight: 600;
     line-height: 1.3;
-    margin-bottom: 0.75rem;
     letter-spacing: -0.01em;
   }
 
+  .article-subtitle {
+    margin-top: 0.6rem;
+    font-size: 1rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+
   .article-meta {
+    margin-top: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
     font-family: var(--font-mono);
     font-size: 0.85rem;
     color: var(--text-muted);
+  }
+
+  .meta-dot {
+    opacity: 0.6;
   }
 </style>
