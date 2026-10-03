@@ -1,4 +1,12 @@
 ---
+import ThemeToggle from './ThemeToggle.astro';
+
+interface Props {
+  siteTitle?: string;
+}
+
+const { siteTitle = '极简博客' } = Astro.props;
+
 const pathname = Astro.url.pathname;
 const isCurrent = (path: string) => {
   if (path === '/') return pathname === '/';
@@ -8,42 +16,72 @@ const isCurrent = (path: string) => {
 
 <header class="header">
   <div class="container nav-wrapper">
-    <nav class="nav">
+    <!-- 左侧：博客名称 -->
+    <div class="nav-brand">
+      <a href="/" class="brand-link">{siteTitle}</a>
+    </div>
+
+    <!-- 中间：首页与文章 -->
+    <nav class="nav-links">
       <a href="/" class:list={[{ active: isCurrent('/') }]}>首页</a>
       <a href="/posts" class:list={[{ active: isCurrent('/posts') }]}>文章</a>
     </nav>
+
+    <!-- 右侧：浅色/深色模式切换 -->
+    <div class="nav-actions">
+      <ThemeToggle />
+    </div>
   </div>
 </header>
 
 <style>
   .header {
-    padding: 2.5rem 0 1.5rem 0;
+    padding: 2.25rem 0 1.5rem 0;
   }
 
   .nav-wrapper {
-    display: flex;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
     align-items: center;
   }
 
-  .nav {
+  .nav-brand {
+    justify-self: start;
+  }
+
+  .brand-link {
+    font-weight: 600;
+    font-size: 1rem;
+    letter-spacing: -0.01em;
+    color: var(--text);
+  }
+
+  .nav-links {
+    justify-self: center;
     display: flex;
     gap: 1.5rem;
     font-size: 0.95rem;
   }
 
-  .nav a {
+  .nav-links a {
     color: var(--text-muted);
     text-decoration: none;
     transition: color 0.15s ease;
   }
 
-  .nav a:hover {
+  .nav-links a:hover {
     color: var(--text);
     opacity: 1;
   }
 
-  .nav a.active {
+  .nav-links a.active {
     color: var(--text);
     font-weight: 500;
+  }
+
+  .nav-actions {
+    justify-self: end;
+    display: flex;
+    align-items: center;
   }
 </style>

@@ -1,0 +1,132 @@
+---
+---
+
+<button
+  type="button"
+  id="theme-toggle"
+  class="theme-toggle"
+  aria-label="切换浅色/深色模式"
+  title="切换主题"
+>
+  <!-- 太阳图标 (在深色模式下显示，点击切换为浅色) -->
+  <svg
+    class="theme-icon icon-sun"
+    xmlns="http://www.w3.org/2000/svg"
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.8"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <circle cx="12" cy="12" r="4"></circle>
+    <path d="M12 2v2"></path>
+    <path d="M12 20v2"></path>
+    <path d="m4.93 4.93 1.41 1.41"></path>
+    <path d="m17.66 17.66 1.41 1.41"></path>
+    <path d="M2 12h2"></path>
+    <path d="M20 12h2"></path>
+    <path d="m6.34 17.66-1.41 1.41"></path>
+    <path d="m19.07 4.93-1.41 1.41"></path>
+  </svg>
+
+  <!-- 月亮图标 (在浅色模式下显示，点击切换为深色) -->
+  <svg
+    class="theme-icon icon-moon"
+    xmlns="http://www.w3.org/2000/svg"
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.8"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
+  </svg>
+</button>
+
+<style>
+  .theme-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0.35rem;
+    border-radius: 4px;
+    color: var(--text-muted);
+    transition: color 0.15s ease, opacity 0.15s ease;
+    line-height: 0;
+  }
+
+  .theme-toggle:hover {
+    color: var(--text);
+  }
+
+  .theme-icon {
+    display: none;
+  }
+
+  /* 默认浅色 */
+  .icon-moon {
+    display: block;
+  }
+
+  .icon-sun {
+    display: none;
+  }
+
+  /* 深色属性 */
+  :global([data-theme="dark"]) .icon-moon {
+    display: none;
+  }
+
+  :global([data-theme="dark"]) .icon-sun {
+    display: block;
+  }
+
+  :global([data-theme="light"]) .icon-moon {
+    display: block;
+  }
+
+  :global([data-theme="light"]) .icon-sun {
+    display: none;
+  }
+
+  /* 媒体查询备用 */
+  @media (prefers-color-scheme: dark) {
+    :global(:root:not([data-theme="light"])) .icon-moon {
+      display: none;
+    }
+    :global(:root:not([data-theme="light"])) .icon-sun {
+      display: block;
+    }
+  }
+</style>
+
+<script>
+  function setupThemeToggle() {
+    const toggle = document.getElementById('theme-toggle');
+    if (!toggle) return;
+
+    toggle.addEventListener('click', () => {
+      const currentTheme = document.documentElement.getAttribute('data-theme');
+      const isDark = currentTheme
+        ? currentTheme === 'dark'
+        : window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+      const nextTheme = isDark ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', nextTheme);
+      localStorage.setItem('theme', nextTheme);
+    });
+  }
+
+  // 初次加载与视图切换支持
+  setupThemeToggle();
+  document.addEventListener('astro:after-swap', setupThemeToggle);
+</script>

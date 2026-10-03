@@ -20,6 +20,19 @@ const { title = '极简博客', description = '一个克制、纯粹的个人博
     <meta name="generator" content={Astro.generator} />
     <meta name="description" content={description} />
     <title>{title === '极简博客' ? title : `${title} · 极简博客`}</title>
+
+    <script is:inline>
+      const theme = (() => {
+        if (typeof localStorage !== 'undefined' && localStorage.getItem('theme')) {
+          return localStorage.getItem('theme');
+        }
+        if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+          return 'dark';
+        }
+        return 'light';
+      })();
+      document.documentElement.setAttribute('data-theme', theme);
+    </script>
   </head>
   <body>
     <Header />

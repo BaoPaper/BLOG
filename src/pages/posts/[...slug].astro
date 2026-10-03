@@ -20,10 +20,6 @@ const formatDate = (date: Date) => {
 
 <BaseLayout title={post.data.title} description={post.data.description}>
   <article class="post-article">
-    <div class="back-nav">
-      <a href="/posts" class="back-link">← 返回文章</a>
-    </div>
-
     <header class="article-header">
       <h1 class="article-title">{post.data.title}</h1>
       <div class="article-meta">
@@ -40,19 +36,6 @@ const formatDate = (date: Date) => {
 </BaseLayout>
 
 <style>
-  .back-nav {
-    margin-bottom: 2rem;
-  }
-
-  .back-link {
-    font-size: 0.875rem;
-    color: var(--text-muted);
-  }
-
-  .back-link:hover {
-    color: var(--text);
-  }
-
   .article-header {
     margin-bottom: 2.5rem;
     padding-bottom: 1.5rem;
