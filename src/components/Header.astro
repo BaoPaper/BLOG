@@ -1,0 +1,49 @@
+---
+const pathname = Astro.url.pathname;
+const isCurrent = (path: string) => {
+  if (path === '/') return pathname === '/';
+  return pathname.startsWith(path);
+};
+---
+
+<header class="header">
+  <div class="container nav-wrapper">
+    <nav class="nav">
+      <a href="/" class:list={[{ active: isCurrent('/') }]}>首页</a>
+      <a href="/posts" class:list={[{ active: isCurrent('/posts') }]}>文章</a>
+    </nav>
+  </div>
+</header>
+
+<style>
+  .header {
+    padding: 2.5rem 0 1.5rem 0;
+  }
+
+  .nav-wrapper {
+    display: flex;
+    align-items: center;
+  }
+
+  .nav {
+    display: flex;
+    gap: 1.5rem;
+    font-size: 0.95rem;
+  }
+
+  .nav a {
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: color 0.15s ease;
+  }
+
+  .nav a:hover {
+    color: var(--text);
+    opacity: 1;
+  }
+
+  .nav a.active {
+    color: var(--text);
+    font-weight: 500;
+  }
+</style>

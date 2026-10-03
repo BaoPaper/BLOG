@@ -1,0 +1,23 @@
+---
+const year = new Date().getFullYear();
+---
+
+<footer class="footer">
+  <div class="container footer-content">
+    <span>© {year}</span>
+  </div>
+</footer>
+
+<style>
+  .footer {
+    margin-top: auto;
+    padding: 3rem 0 2.5rem;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+
+  .footer-content {
+    display: flex;
+    justify-content: flex-start;
+  }
+</style>
