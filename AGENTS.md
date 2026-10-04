@@ -1,22 +1,16 @@
-## Development
+开发规范与项目要求
 
-When starting the dev server, use background mode:
+1. 开发服务
+启动开发服务器使用后台模式：pnpm dev --background
+管理后台服务使用 pnpm dev stop、pnpm dev status、pnpm dev logs。
 
-```
-astro dev --background
-```
+2. 静态直出与无 JS 兼容
+正文图注、代码块外层与语言标签等内容必须在构建期（Rehype/模板）静态生成，确保无 JS 模式下排版完整，严禁在客户端用 JS 动态修改或拼装正文 DOM。
 
-Manage the background server with `astro dev stop`, `astro dev status`, and `astro dev logs`.
+3. 渐进增强
+客户端脚本仅用于轻量交互增强（如代码一键复制、全屏图片视图手势），不得承担初始排版逻辑。
 
-## Documentation
-
-Full documentation: https://docs.astro.build
-
-Consult these guides before working on related tasks:
-
-- [Adding pages, dynamic routes, or middleware](https://docs.astro.build/en/guides/routing/)
-- [Working with Astro components](https://docs.astro.build/en/basics/astro-components/)
-- [Using React, Vue, Svelte, or other framework components](https://docs.astro.build/en/guides/framework-components/)
-- [Adding or managing content](https://docs.astro.build/en/guides/content-collections/)
-- [Adding styles or using Tailwind](https://docs.astro.build/en/guides/styling/)
-- [Supporting multiple languages](https://docs.astro.build/en/guides/internationalization/)
+4. 样式与视觉规范
+组件背景色必须与主题 CSS 变量绑定，杜绝首屏白闪与布局抖动。
+统一组件圆角规范：表格、代码块、正文图片统一使用 8px 圆角，按钮与小组件使用 4px 圆角。
+保持低对比度、克制柔和的极简黑白灰美学风格。
