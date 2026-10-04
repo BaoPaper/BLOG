@@ -3,6 +3,9 @@ dist/
 # generated types
 .astro/
 
+# downloaded external favicons cache
+public/favicons/
+
 # dependencies
 node_modules/
 

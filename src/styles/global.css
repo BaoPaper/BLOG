@@ -99,6 +99,33 @@ a:hover {
   opacity: 1;
 }
 
+/* 站外链接与 Favicon 图标 */
+.prose a.external-link {
+  word-break: break-word;
+}
+
+.prose .link-favicon {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-right: 4px;
+  vertical-align: -0.15em;
+  border-radius: 2px;
+  object-fit: contain;
+  pointer-events: none;
+  background-color: transparent;
+}
+
+:root[data-theme="dark"] .prose .link-favicon {
+  opacity: 0.85;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .prose .link-favicon {
+    opacity: 0.85;
+  }
+}
+
 .prose h1,
 .prose h2,
 .prose h3,

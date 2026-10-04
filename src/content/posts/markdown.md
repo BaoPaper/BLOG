@@ -30,7 +30,9 @@ description: "各种 MarkDown 语法渲染测试。"
 - [ ] 未完成任务
 
 ## 5. 链接与图片
-[OpenAI](https://www.openai.com)
+- 站外链接（显示 Favicon）：[OpenAI](https://www.openai.com) 、 [GitHub](https://github.com)
+- 站内链接（无 Favicon）：[返回文章列表](/posts)
+- 锚点链接（无 Favicon）：[跳转到顶部标题](#1-标题)
 
 ![必应每日一图](https://uapis.cn/api/v1/image/bing-daily)
 

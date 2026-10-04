@@ -1,3 +1,5 @@
+import { getOrFetchFavicon } from './favicon-cache.mjs';
+
 const LANG_MAP = {
   js: 'JavaScript',
   javascript: 'JavaScript',
@@ -55,6 +57,16 @@ function formatLang(rawLang) {
   return clean.charAt(0).toUpperCase() + clean.slice(1);
 }
 
+function hasMediaChild(children) {
+  if (!Array.isArray(children)) return false;
+  return children.some((c) => {
+    if (c.type === 'element' && ['img', 'svg', 'picture', 'figure', 'video'].includes(c.tagName)) {
+      return true;
+    }
+    return hasMediaChild(c.children);
+  });
+}
+
 function walkTree(node, visitor, index = 0, parent = null) {
   if (!node || typeof node !== 'object') return;
   const replacement = visitor(node, index, parent);
@@ -70,7 +82,9 @@ function walkTree(node, visitor, index = 0, parent = null) {
 }
 
 export function rehypeContentEnhancer() {
-  return (tree) => {
+  return async (tree) => {
+    const externalLinkTasks = [];
+
     walkTree(tree, (node, index, parent) => {
       // 1. 静态图注转换：检测仅包含单张图片的段落或带有 alt 的图片
       if (node.type === 'element' && node.tagName === 'p') {
@@ -237,6 +251,84 @@ export function rehypeContentEnhancer() {
 
         return wrapper;
       }
+
+      // 3. 站外链接 Favicon 图标与安全属性增强（站内链接保持纯文字）
+      if (node.type === 'element' && node.tagName === 'a') {
+        const href = (node.properties?.href || '').toString().trim();
+
+        // 排除锚点、空链接与特殊协议
+        if (
+          !href ||
+          href.startsWith('#') ||
+          href.startsWith('/') ||
+          href.startsWith('./') ||
+          href.startsWith('../') ||
+          href.startsWith('mailto:') ||
+          href.startsWith('tel:') ||
+          href.startsWith('javascript:')
+        ) {
+          return;
+        }
+
+        // 解析 URL 判断是否为合法的 HTTP/HTTPS 站外链接
+        let hostname = '';
+        try {
+          const parsed = new URL(href);
+          if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+            return;
+          }
+          hostname = parsed.hostname;
+        } catch {
+          return;
+        }
+
+        // 避免给已处理或内部包含图片的富媒体链接添加图标
+        if (node.properties?.['data-favicon-processed'] || hasMediaChild(node.children)) {
+          return;
+        }
+
+        node.properties = node.properties || {};
+        node.properties['data-favicon-processed'] = 'true';
+        node.properties.target = '_blank';
+        node.properties.rel = 'noopener noreferrer';
+
+        const existingClass = Array.isArray(node.properties.className)
+          ? node.properties.className
+          : node.properties.className
+            ? [node.properties.className]
+            : [];
+        node.properties.className = [...existingClass, 'external-link'];
+
+        externalLinkTasks.push({ node, hostname });
+      }
     });
+
+    // 构建时并发拉取与私有化 Favicon，并注入到节点中
+    if (externalLinkTasks.length > 0) {
+      await Promise.all(
+        externalLinkTasks.map(async ({ node, hostname }) => {
+          const localFavicon = await getOrFetchFavicon(hostname);
+          if (localFavicon) {
+            const faviconNode = {
+              type: 'element',
+              tagName: 'img',
+              properties: {
+                className: ['link-favicon'],
+                src: localFavicon,
+                alt: '',
+                width: '14',
+                height: '14',
+                loading: 'lazy',
+                decoding: 'async',
+                'aria-hidden': 'true',
+                onerror: "this.style.display='none'",
+              },
+              children: [],
+            };
+            node.children = [faviconNode, ...(node.children || [])];
+          }
+        })
+      );
+    }
   };
 }
