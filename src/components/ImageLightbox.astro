@@ -66,7 +66,8 @@
 
   function setupImageLightbox() {
     const modal = document.getElementById('image-lightbox');
-    if (!modal) return;
+    if (!modal || modal.dataset.lightboxInitialized) return;
+    modal.dataset.lightboxInitialized = 'true';
 
     const imgElement = document.getElementById('lightbox-image') as HTMLImageElement;
     const stage = document.getElementById('lightbox-stage');
@@ -109,6 +110,7 @@
 
     let currentIndex = 0;
     let isOpen = false;
+    let previousActiveElement: HTMLElement | null = null;
 
     let baseWidth = 0;
     let baseHeight = 0;
@@ -183,11 +185,17 @@
     const calculateBaseDimensions = () => {
       const naturalW = imgElement.naturalWidth || window.innerWidth;
       const naturalH = imgElement.naturalHeight || window.innerHeight;
-      const viewportW = window.innerWidth;
-      const viewportH = window.innerHeight;
 
-      // 原图小于视口保持 1:1，原图大于视口等比收缩
-      const fitRatio = Math.min(viewportW / naturalW, viewportH / naturalH, 1);
+      // 预留两侧与上下安全边距，避免大图紧贴边缘或被底部控制条遮挡
+      const horizontalPadding = window.innerWidth > 640 ? 40 : 20;
+      const topPadding = window.innerWidth > 640 ? 40 : 20;
+      const bottomPadding = window.innerWidth > 640 ? 110 : 96;
+
+      const availableW = Math.max(window.innerWidth - horizontalPadding * 2, 100);
+      const availableH = Math.max(window.innerHeight - topPadding - bottomPadding, 100);
+
+      // 原图小于可用区域保持 1:1，原图大于可用区域等比收缩
+      const fitRatio = Math.min(availableW / naturalW, availableH / naturalH, 1);
       baseWidth = naturalW * fitRatio;
       baseHeight = naturalH * fitRatio;
 
@@ -235,12 +243,14 @@
     };
 
     const openLightbox = (index: number) => {
+      previousActiveElement = document.activeElement as HTMLElement | null;
       currentIndex = index;
       isOpen = true;
       modal.classList.add('is-active');
       modal.setAttribute('aria-hidden', 'false');
       document.body.style.overflow = 'hidden';
       updateView();
+      btnClose?.focus?.();
     };
 
     const closeLightbox = () => {
@@ -250,6 +260,9 @@
       modal.setAttribute('aria-hidden', 'true');
       document.body.style.overflow = '';
       resetTransform(false);
+      if (previousActiveElement && typeof previousActiveElement.focus === 'function') {
+        previousActiveElement.focus();
+      }
     };
 
     const prevImage = () => {

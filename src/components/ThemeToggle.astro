@@ -111,7 +111,8 @@
 <script>
   function setupThemeToggle() {
     const toggle = document.getElementById('theme-toggle');
-    if (!toggle) return;
+    if (!toggle || toggle.dataset.toggleInitialized) return;
+    toggle.dataset.toggleInitialized = 'true';
 
     toggle.addEventListener('click', () => {
       const currentTheme = document.documentElement.getAttribute('data-theme');
@@ -124,7 +125,10 @@
       // 仅在用户主动点击切换时注入平滑呼吸过渡，首屏加载与日常访问绝对零闪烁
       document.documentElement.classList.add('theme-transitioning');
       document.documentElement.setAttribute('data-theme', nextTheme);
-      localStorage.setItem('theme', nextTheme);
+
+      try {
+        localStorage.setItem('theme', nextTheme);
+      } catch {}
 
       setTimeout(() => {
         document.documentElement.classList.remove('theme-transitioning');
@@ -133,6 +137,11 @@
   }
 
   // 初次加载与视图切换支持
-  setupThemeToggle();
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupThemeToggle);
+  } else {
+    setupThemeToggle();
+  }
   document.addEventListener('astro:after-swap', setupThemeToggle);
+  document.addEventListener('astro:page-load', setupThemeToggle);
 </script>

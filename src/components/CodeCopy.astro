@@ -3,6 +3,8 @@
 ---
 
 <script>
+  const copyTimers = new WeakMap<HTMLButtonElement, number>();
+
   function setupCodeCopy() {
     const copyButtons = document.querySelectorAll<HTMLButtonElement>('.code-copy-btn');
 
@@ -36,10 +38,18 @@
           const textEl = btn.querySelector('.code-copy-text');
           if (textEl) textEl.textContent = '已复制';
 
-          setTimeout(() => {
+          const existingTimer = copyTimers.get(btn);
+          if (existingTimer) {
+            clearTimeout(existingTimer);
+          }
+
+          const timer = window.setTimeout(() => {
             btn.classList.remove('copied');
             if (textEl) textEl.textContent = '复制';
+            copyTimers.delete(btn);
           }, 2000);
+
+          copyTimers.set(btn, timer);
         } catch (err) {
           console.error('复制代码失败:', err);
         }
