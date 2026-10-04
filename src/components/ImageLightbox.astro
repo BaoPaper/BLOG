@@ -13,8 +13,14 @@
     </div>
   </div>
 
-  <!-- 底部一体化悬浮控制中心 (Dock) -->
+  <!-- 底部悬浮控制中心与独立图注区 -->
   <div class="lightbox-bottombar">
+    <!-- 独立悬浮图注：位于 Dock 正上方，不影响 Dock 控制按钮的尺寸与定位 -->
+    <div class="lightbox-caption-badge" id="lightbox-caption">
+      <span class="caption-text" id="lightbox-caption-text"></span>
+    </div>
+
+    <!-- 纯粹操作控制中心 (Dock)：尺寸恒定，按钮坐标绝对静止防抖动 -->
     <div class="lightbox-dock" id="lightbox-dock">
       <!-- 上一张 -->
       <button class="dock-btn dock-nav-btn" id="lightbox-btn-prev" title="上一张 (←)" aria-label="上一张图片">
@@ -28,11 +34,6 @@
         <span id="lightbox-index">1</span>
         <span class="dock-sep">/</span>
         <span id="lightbox-total">1</span>
-      </div>
-
-      <!-- 图片小标题 -->
-      <div class="dock-caption" id="lightbox-caption">
-        <span class="caption-text" id="lightbox-caption-text"></span>
       </div>
 
       <!-- 下一张 -->
@@ -205,7 +206,9 @@
         captionText.textContent = current.alt || '';
       }
       if (captionContainer) {
-        captionContainer.style.display = hasAlt ? 'block' : 'none';
+        captionContainer.style.opacity = hasAlt ? '1' : '0';
+        captionContainer.style.pointerEvents = hasAlt ? 'auto' : 'none';
+        captionContainer.style.transform = hasAlt ? 'translateY(0)' : 'translateY(6px)';
       }
 
       if (indexText) indexText.textContent = String(currentIndex + 1);
@@ -217,9 +220,9 @@
       if (btnNext) btnNext.style.display = isMulti ? 'inline-flex' : 'none';
       if (counterContainer) counterContainer.style.display = isMulti ? 'inline-flex' : 'none';
 
-      // 当既没有多图也没有标题时，分割线可以隐藏以保持极端精致
+      // 单图时无多图导航，分割线可隐藏保持极端精致
       if (divider) {
-        divider.style.display = isMulti || hasAlt ? 'block' : 'none';
+        divider.style.display = isMulti ? 'block' : 'none';
       }
 
       if (imgElement.complete && imgElement.naturalWidth > 0) {
@@ -495,7 +498,7 @@
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
   }
 
-  /* 底部一体化控制中心悬浮容器 (Dock Bar) */
+  /* 底部悬浮控制中心与图注容器 (Bottom Bar) */
   .lightbox-bottombar {
     position: absolute;
     bottom: 0;
@@ -503,12 +506,39 @@
     right: 0;
     z-index: 20;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: 0.65rem;
     padding: 1.25rem 1.5rem 1.75rem 1.5rem;
     pointer-events: none;
   }
 
+  /* 独立悬浮图注：轻量半透明胶囊，平滑过渡，不干扰 Dock 尺寸 */
+  .lightbox-caption-badge {
+    pointer-events: auto;
+    font-size: 0.82rem;
+    color: rgba(255, 255, 255, 0.9);
+    padding: 0.35rem 0.85rem;
+    background: rgba(26, 26, 26, 0.9);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 999px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    max-width: 80vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    user-select: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+  }
+
+  .lightbox-caption-badge .caption-text {
+    letter-spacing: 0.01em;
+  }
+
+  /* 纯粹控制中心 (Dock)：宽度物理恒定，按键位置绝不发生漂移 */
   .lightbox-dock {
     pointer-events: auto;
     display: inline-flex;
@@ -516,11 +546,12 @@
     gap: 0.45rem;
     padding: 0.35rem 0.5rem;
     background: rgba(26, 26, 26, 0.9);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     border: 1px solid rgba(255, 255, 255, 0.16);
     border-radius: 999px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
     color: #ffffff;
-    max-width: 90vw;
   }
 
   /* 胶囊内的通用按钮 */
@@ -567,18 +598,6 @@
     opacity: 0.4;
   }
 
-  /* 小标题文字 */
-  .dock-caption {
-    font-size: 0.82rem;
-    color: rgba(255, 255, 255, 0.92);
-    padding: 0 0.4rem;
-    max-width: 40vw;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    user-select: none;
-  }
-
   /* 分割细线 */
   .dock-divider {
     width: 1px;
@@ -592,11 +611,13 @@
   @media (max-width: 640px) {
     .lightbox-bottombar {
       padding: 1rem 1rem 1.25rem 1rem;
+      gap: 0.5rem;
     }
 
-    .dock-caption {
-      max-width: 32vw;
+    .lightbox-caption-badge {
+      max-width: 88vw;
       font-size: 0.78rem;
+      padding: 0.25rem 0.7rem;
     }
 
     .dock-btn {
