@@ -1,0 +1,610 @@
+---
+// 全屏极简图片视图组件：支持真实像素无损渲染、鼠标滚轮/手势缩放、一体化底部控制中心
+---
+
+<!-- Lightbox 图片全屏/画廊视图模态框 -->
+<div id="image-lightbox" class="lightbox-modal" aria-hidden="true" role="dialog" aria-label="图片视图">
+  <div class="lightbox-backdrop"></div>
+
+  <!-- 视口与全屏图片承载区 -->
+  <div class="lightbox-viewport" id="lightbox-viewport">
+    <div class="lightbox-stage" id="lightbox-stage">
+      <img id="lightbox-image" class="lightbox-img" src="" alt="" draggable="false" />
+    </div>
+  </div>
+
+  <!-- 底部一体化悬浮控制中心 (Dock) -->
+  <div class="lightbox-bottombar">
+    <div class="lightbox-dock" id="lightbox-dock">
+      <!-- 上一张 -->
+      <button class="dock-btn dock-nav-btn" id="lightbox-btn-prev" title="上一张 (←)" aria-label="上一张图片">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+      </button>
+
+      <!-- 多图计数器 -->
+      <div class="dock-counter" id="lightbox-counter">
+        <span id="lightbox-index">1</span>
+        <span class="dock-sep">/</span>
+        <span id="lightbox-total">1</span>
+      </div>
+
+      <!-- 图片小标题 -->
+      <div class="dock-caption" id="lightbox-caption">
+        <span class="caption-text" id="lightbox-caption-text"></span>
+      </div>
+
+      <!-- 下一张 -->
+      <button class="dock-btn dock-nav-btn" id="lightbox-btn-next" title="下一张 (→)" aria-label="下一张图片">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+      </button>
+
+      <!-- 分割线 -->
+      <span class="dock-divider" id="lightbox-dock-divider"></span>
+
+      <!-- 关闭按钮 -->
+      <button class="dock-btn dock-close-btn" id="lightbox-btn-close" title="关闭 (Esc)" aria-label="关闭图片视图">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  interface GalleryItem {
+    src: string;
+    alt: string;
+    imgEl: HTMLImageElement;
+  }
+
+  function setupImageLightbox() {
+    const modal = document.getElementById('image-lightbox');
+    if (!modal) return;
+
+    const imgElement = document.getElementById('lightbox-image') as HTMLImageElement;
+    const stage = document.getElementById('lightbox-stage');
+    const viewport = document.getElementById('lightbox-viewport');
+    const captionContainer = document.getElementById('lightbox-caption');
+    const captionText = document.getElementById('lightbox-caption-text');
+    const indexText = document.getElementById('lightbox-index');
+    const totalText = document.getElementById('lightbox-total');
+    const counterContainer = document.getElementById('lightbox-counter');
+    const divider = document.getElementById('lightbox-dock-divider');
+
+    const btnClose = document.getElementById('lightbox-btn-close');
+    const btnPrev = document.getElementById('lightbox-btn-prev');
+    const btnNext = document.getElementById('lightbox-btn-next');
+    const backdrop = modal.querySelector('.lightbox-backdrop');
+
+    if (!imgElement || !stage || !viewport) return;
+
+    const proseImgs = Array.from(document.querySelectorAll<HTMLImageElement>('.prose img'));
+    if (proseImgs.length === 0) return;
+
+    const gallery: GalleryItem[] = [];
+
+    proseImgs.forEach((img) => {
+      const altText = (img.getAttribute('alt') || img.getAttribute('title') || '').trim();
+      const currentSrc = img.currentSrc || img.getAttribute('src') || '';
+      
+      const itemIndex = gallery.length;
+      gallery.push({ src: currentSrc, alt: altText, imgEl: img });
+
+      if (img.dataset.lightboxBound) return;
+      img.dataset.lightboxBound = 'true';
+
+      img.addEventListener('click', (e) => {
+        e.preventDefault();
+        openLightbox(itemIndex);
+      });
+    });
+
+    let currentIndex = 0;
+    let isOpen = false;
+
+    let baseWidth = 0;
+    let baseHeight = 0;
+
+    let scale = 1;
+    let translateX = 0;
+    let translateY = 0;
+
+    let isDragging = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
+    let dragStartTranslateX = 0;
+    let dragStartTranslateY = 0;
+    let hasDragged = false;
+
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchStartTime = 0;
+    let initialPinchDistance = 0;
+    let initialPinchScale = 1;
+    let isPinching = false;
+
+    const MIN_SCALE = 0.5;
+    const MAX_SCALE = 5;
+
+    // 真实高清物理像素驱动
+    const applyDimensions = (smooth = false) => {
+      const renderW = Math.round(baseWidth * scale);
+      const renderH = Math.round(baseHeight * scale);
+
+      imgElement.style.transition = smooth ? 'width 0.25s cubic-bezier(0.2, 0, 0.2, 1), height 0.25s cubic-bezier(0.2, 0, 0.2, 1)' : 'none';
+      imgElement.style.width = `${renderW}px`;
+      imgElement.style.height = `${renderH}px`;
+
+      stage.style.transition = smooth ? 'transform 0.25s cubic-bezier(0.2, 0, 0.2, 1)' : 'none';
+      stage.style.transform = `translate3d(${Math.round(translateX)}px, ${Math.round(translateY)}px, 0)`;
+
+      if (viewport) {
+        viewport.style.cursor = scale > 1 ? (isDragging ? 'grabbing' : 'grab') : 'default';
+      }
+    };
+
+    const resetTransform = (smooth = false) => {
+      scale = 1;
+      translateX = 0;
+      translateY = 0;
+      applyDimensions(smooth);
+    };
+
+    const zoomTo = (targetScale: number, centerX?: number, centerY?: number, smooth = true) => {
+      const nextScale = Math.min(Math.max(targetScale, MIN_SCALE), MAX_SCALE);
+      if (Math.abs(nextScale - scale) < 0.001) return;
+
+      if (centerX !== undefined && centerY !== undefined) {
+        const originX = centerX - (window.innerWidth / 2 + translateX);
+        const originY = centerY - (window.innerHeight / 2 + translateY);
+        const ratio = nextScale / scale;
+
+        translateX = centerX - window.innerWidth / 2 - originX * ratio;
+        translateY = centerY - window.innerHeight / 2 - originY * ratio;
+      }
+
+      if (nextScale <= 1) {
+        translateX = 0;
+        translateY = 0;
+      }
+
+      scale = nextScale;
+      applyDimensions(smooth);
+    };
+
+    const calculateBaseDimensions = () => {
+      const naturalW = imgElement.naturalWidth || window.innerWidth;
+      const naturalH = imgElement.naturalHeight || window.innerHeight;
+      const viewportW = window.innerWidth;
+      const viewportH = window.innerHeight;
+
+      // 原图小于视口保持 1:1，原图大于视口等比收缩
+      const fitRatio = Math.min(viewportW / naturalW, viewportH / naturalH, 1);
+      baseWidth = naturalW * fitRatio;
+      baseHeight = naturalH * fitRatio;
+
+      resetTransform(false);
+    };
+
+    const updateView = () => {
+      const current = gallery[currentIndex];
+      if (!current) return;
+
+      imgElement.src = current.src;
+      imgElement.alt = current.alt || '';
+
+      const hasAlt = Boolean(current.alt);
+      if (captionText) {
+        captionText.textContent = current.alt || '';
+      }
+      if (captionContainer) {
+        captionContainer.style.display = hasAlt ? 'block' : 'none';
+      }
+
+      if (indexText) indexText.textContent = String(currentIndex + 1);
+      if (totalText) totalText.textContent = String(gallery.length);
+
+      // 单图 / 多图自适应控制元素呈现
+      const isMulti = gallery.length > 1;
+      if (btnPrev) btnPrev.style.display = isMulti ? 'inline-flex' : 'none';
+      if (btnNext) btnNext.style.display = isMulti ? 'inline-flex' : 'none';
+      if (counterContainer) counterContainer.style.display = isMulti ? 'inline-flex' : 'none';
+
+      // 当既没有多图也没有标题时，分割线可以隐藏以保持极端精致
+      if (divider) {
+        divider.style.display = isMulti || hasAlt ? 'block' : 'none';
+      }
+
+      if (imgElement.complete && imgElement.naturalWidth > 0) {
+        calculateBaseDimensions();
+      } else {
+        imgElement.onload = () => {
+          calculateBaseDimensions();
+        };
+      }
+    };
+
+    const openLightbox = (index: number) => {
+      currentIndex = index;
+      isOpen = true;
+      modal.classList.add('is-active');
+      modal.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+      updateView();
+    };
+
+    const closeLightbox = () => {
+      if (!isOpen) return;
+      isOpen = false;
+      modal.classList.remove('is-active');
+      modal.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+      resetTransform(false);
+    };
+
+    const prevImage = () => {
+      if (gallery.length <= 1) return;
+      currentIndex = (currentIndex - 1 + gallery.length) % gallery.length;
+      updateView();
+    };
+
+    const nextImage = () => {
+      if (gallery.length <= 1) return;
+      currentIndex = (currentIndex + 1) % gallery.length;
+      updateView();
+    };
+
+    btnClose?.addEventListener('click', closeLightbox);
+    backdrop?.addEventListener('click', closeLightbox);
+    btnPrev?.addEventListener('click', prevImage);
+    btnNext?.addEventListener('click', nextImage);
+
+    window.addEventListener('resize', () => {
+      if (isOpen) {
+        calculateBaseDimensions();
+      }
+    });
+
+    viewport.addEventListener('dblclick', (e) => {
+      e.preventDefault();
+      if (scale > 1.05) {
+        resetTransform(true);
+      } else {
+        zoomTo(2, e.clientX, e.clientY, true);
+      }
+    });
+
+    viewport.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const delta = e.deltaY < 0 ? 0.25 : -0.25;
+      zoomTo(scale + delta, e.clientX, e.clientY, false);
+    }, { passive: false });
+
+    viewport.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return;
+      isDragging = true;
+      hasDragged = false;
+      dragStartX = e.clientX;
+      dragStartY = e.clientY;
+      dragStartTranslateX = translateX;
+      dragStartTranslateY = translateY;
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!isDragging || !isOpen) return;
+      const dx = e.clientX - dragStartX;
+      const dy = e.clientY - dragStartY;
+
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+        hasDragged = true;
+      }
+
+      if (scale > 1) {
+        translateX = dragStartTranslateX + dx;
+        translateY = dragStartTranslateY + dy;
+        applyDimensions(false);
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (isDragging) {
+        isDragging = false;
+        if (viewport) {
+          viewport.style.cursor = scale > 1 ? 'grab' : 'default';
+        }
+      }
+    });
+
+    viewport.addEventListener('click', (e) => {
+      if ((e.target === viewport || e.target === stage) && !hasDragged) {
+        closeLightbox();
+      }
+    });
+
+    const getTouchDistance = (t1: Touch, t2: Touch) => {
+      return Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+    };
+
+    viewport.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 1) {
+        isPinching = false;
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+        touchStartTime = Date.now();
+        dragStartTranslateX = translateX;
+        dragStartTranslateY = translateY;
+      } else if (e.touches.length === 2) {
+        isPinching = true;
+        initialPinchDistance = getTouchDistance(e.touches[0], e.touches[1]);
+        initialPinchScale = scale;
+      }
+    }, { passive: true });
+
+    viewport.addEventListener('touchmove', (e) => {
+      if (isPinching && e.touches.length === 2) {
+        const currentDistance = getTouchDistance(e.touches[0], e.touches[1]);
+        if (initialPinchDistance > 0) {
+          const factor = currentDistance / initialPinchDistance;
+          const targetScale = Math.min(Math.max(initialPinchScale * factor, MIN_SCALE), MAX_SCALE);
+          const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+          const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+          zoomTo(targetScale, midX, midY, false);
+        }
+      } else if (!isPinching && e.touches.length === 1 && scale > 1) {
+        const dx = e.touches[0].clientX - touchStartX;
+        const dy = e.touches[0].clientY - touchStartY;
+        translateX = dragStartTranslateX + dx;
+        translateY = dragStartTranslateY + dy;
+        applyDimensions(false);
+      }
+    }, { passive: true });
+
+    viewport.addEventListener('touchend', (e) => {
+      if (isPinching && e.touches.length < 2) {
+        isPinching = false;
+        if (scale <= 1) {
+          resetTransform(true);
+        }
+        return;
+      }
+
+      if (scale <= 1 && e.changedTouches.length === 1) {
+        const touchEndX = e.changedTouches[0].clientX;
+        const touchEndY = e.changedTouches[0].clientY;
+        const deltaX = touchEndX - touchStartX;
+        const deltaY = touchEndY - touchStartY;
+        const duration = Date.now() - touchStartTime;
+
+        if (Math.abs(deltaX) > 45 && Math.abs(deltaX) > Math.abs(deltaY) * 1.5 && duration < 400) {
+          if (deltaX < 0) {
+            nextImage();
+          } else {
+            prevImage();
+          }
+        }
+      }
+    }, { passive: true });
+
+    window.addEventListener('keydown', (e) => {
+      if (!isOpen) return;
+
+      switch (e.key) {
+        case 'Escape':
+          e.preventDefault();
+          closeLightbox();
+          break;
+        case 'ArrowLeft':
+        case 'a':
+        case 'A':
+          e.preventDefault();
+          prevImage();
+          break;
+        case 'ArrowRight':
+        case 'd':
+        case 'D':
+          e.preventDefault();
+          nextImage();
+          break;
+        case '+':
+        case '=':
+          e.preventDefault();
+          zoomTo(scale + 0.35, window.innerWidth / 2, window.innerHeight / 2, true);
+          break;
+        case '-':
+        case '_':
+          e.preventDefault();
+          zoomTo(scale - 0.35, window.innerWidth / 2, window.innerHeight / 2, true);
+          break;
+        case '0':
+          e.preventDefault();
+          resetTransform(true);
+          break;
+      }
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupImageLightbox);
+  } else {
+    setupImageLightbox();
+  }
+
+  document.addEventListener('astro:page-load', setupImageLightbox);
+</script>
+
+<style is:global>
+  /* 极简全屏图片视图 Lightbox 样式 */
+  .lightbox-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    user-select: none;
+  }
+
+  .lightbox-modal.is-active {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .lightbox-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.94);
+    z-index: 1;
+  }
+
+  .lightbox-viewport {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    touch-action: none;
+  }
+
+  .lightbox-stage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform-origin: center center;
+  }
+
+  .lightbox-img {
+    display: block;
+    flex-shrink: 0;
+    max-width: none !important;
+    max-height: none !important;
+    border-radius: var(--radius, 8px);
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: high-quality;
+    pointer-events: none;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+  }
+
+  /* 底部一体化控制中心悬浮容器 (Dock Bar) */
+  .lightbox-bottombar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.25rem 1.5rem 1.75rem 1.5rem;
+    pointer-events: none;
+  }
+
+  .lightbox-dock {
+    pointer-events: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.35rem 0.5rem;
+    background: rgba(26, 26, 26, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 999px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    color: #ffffff;
+    max-width: 90vw;
+  }
+
+  /* 胶囊内的通用按钮 */
+  .dock-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.85);
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+    padding: 0;
+    flex-shrink: 0;
+  }
+
+  .dock-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+    transform: scale(1.08);
+  }
+
+  .dock-btn:active {
+    transform: scale(0.95);
+  }
+
+  /* 计数器 */
+  .dock-counter {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.7);
+    padding: 0 0.35rem;
+    user-select: none;
+    flex-shrink: 0;
+  }
+
+  .dock-sep {
+    opacity: 0.4;
+  }
+
+  /* 小标题文字 */
+  .dock-caption {
+    font-size: 0.82rem;
+    color: rgba(255, 255, 255, 0.92);
+    padding: 0 0.4rem;
+    max-width: 40vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    user-select: none;
+  }
+
+  /* 分割细线 */
+  .dock-divider {
+    width: 1px;
+    height: 14px;
+    background: rgba(255, 255, 255, 0.2);
+    margin: 0 0.1rem;
+    flex-shrink: 0;
+  }
+
+  /* 移动端针对控制中心胶囊的适配 */
+  @media (max-width: 640px) {
+    .lightbox-bottombar {
+      padding: 1rem 1rem 1.25rem 1rem;
+    }
+
+    .dock-caption {
+      max-width: 32vw;
+      font-size: 0.78rem;
+    }
+
+    .dock-btn {
+      width: 28px;
+      height: 28px;
+    }
+
+    .dock-counter {
+      font-size: 0.75rem;
+    }
+  }
+</style>

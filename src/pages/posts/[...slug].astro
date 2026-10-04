@@ -1,6 +1,8 @@
 ---
 import { getCollection, render } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import ImageLightbox from '../../components/ImageLightbox.astro';
+import CodeCopy from '../../components/CodeCopy.astro';
 
 export async function getStaticPaths() {
   const posts = await getCollection('posts');
@@ -59,6 +61,9 @@ const wordCount = post.data.words ?? getWordCount(post.body);
       <Content />
     </div>
   </article>
+
+  <ImageLightbox />
+  <CodeCopy />
 </BaseLayout>
 
 <style>

@@ -60,7 +60,6 @@
     padding: 0.2rem;
     border-radius: 4px;
     color: var(--text-muted);
-    transition: color 0.15s ease, opacity 0.15s ease;
     line-height: 0;
   }
 
@@ -121,8 +120,15 @@
         : window.matchMedia('(prefers-color-scheme: dark)').matches;
 
       const nextTheme = isDark ? 'light' : 'dark';
+
+      // 仅在用户主动点击切换时注入平滑呼吸过渡，首屏加载与日常访问绝对零闪烁
+      document.documentElement.classList.add('theme-transitioning');
       document.documentElement.setAttribute('data-theme', nextTheme);
       localStorage.setItem('theme', nextTheme);
+
+      setTimeout(() => {
+        document.documentElement.classList.remove('theme-transitioning');
+      }, 260);
     });
   }
 

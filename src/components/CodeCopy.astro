@@ -1,0 +1,57 @@
+---
+// 负责服务端直出的代码块一键复制交互功能
+---
+
+<script>
+  function setupCodeCopy() {
+    const copyButtons = document.querySelectorAll<HTMLButtonElement>('.code-copy-btn');
+
+    copyButtons.forEach((btn) => {
+      if (btn.dataset.copyInitialized) return;
+      btn.dataset.copyInitialized = 'true';
+
+      btn.addEventListener('click', async () => {
+        const wrapper = btn.closest('.code-block-wrapper');
+        const pre = wrapper ? wrapper.querySelector('pre') : null;
+        if (!pre) return;
+
+        const codeEl = pre.querySelector('code');
+        const codeText = (codeEl ? codeEl.innerText : pre.innerText).replace(/\n$/, '');
+
+        try {
+          if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(codeText);
+          } else {
+            const textarea = document.createElement('textarea');
+            textarea.value = codeText;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            textarea.remove();
+          }
+
+          btn.classList.add('copied');
+          const textEl = btn.querySelector('.code-copy-text');
+          if (textEl) textEl.textContent = '已复制';
+
+          setTimeout(() => {
+            btn.classList.remove('copied');
+            if (textEl) textEl.textContent = '复制';
+          }, 2000);
+        } catch (err) {
+          console.error('复制代码失败:', err);
+        }
+      });
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupCodeCopy);
+  } else {
+    setupCodeCopy();
+  }
+
+  document.addEventListener('astro:page-load', setupCodeCopy);
+</script>
