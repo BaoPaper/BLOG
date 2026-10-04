@@ -353,7 +353,7 @@ a:hover {
 }
 
 /* 图片样式 */
-.prose img {
+.prose img:not(.link-favicon) {
   max-width: 100% !important;
   height: auto !important;
   display: block;
@@ -364,13 +364,13 @@ a:hover {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
 }
 
-:root[data-theme="dark"] .prose img {
+:root[data-theme="dark"] .prose img:not(.link-favicon) {
   border: 1px solid var(--border);
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
 }
 
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .prose img {
+  :root:not([data-theme="light"]) .prose img:not(.link-favicon) {
     border: 1px solid var(--border);
     box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
   }

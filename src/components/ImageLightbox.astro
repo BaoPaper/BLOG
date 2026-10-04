@@ -84,12 +84,13 @@
 
     if (!imgElement || !stage || !viewport) return;
 
-    const proseImgs = Array.from(document.querySelectorAll<HTMLImageElement>('.prose img'));
+    const proseImgs = Array.from(document.querySelectorAll<HTMLImageElement>('.prose img:not(.link-favicon)'));
     if (proseImgs.length === 0) return;
 
     const gallery: GalleryItem[] = [];
 
     proseImgs.forEach((img) => {
+      if (img.classList.contains('link-favicon')) return;
       const altText = (img.getAttribute('alt') || img.getAttribute('title') || '').trim();
       const currentSrc = img.currentSrc || img.getAttribute('src') || '';
       
