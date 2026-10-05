@@ -54,6 +54,20 @@ const wordCount = post.data.words ?? getWordCount(post.body);
             </>
           )
         }
+        {
+          post.data.tags && post.data.tags.length > 0 && (
+            <>
+              <span class="meta-dot">·</span>
+              <span class="article-tags">
+                {post.data.tags.map((tag: string) => (
+                  <a href={`/tags/${encodeURIComponent(tag)}`} class="post-tag">
+                    {tag}
+                  </a>
+                ))}
+              </span>
+            </>
+          )
+        }
       </div>
     </header>
 
@@ -90,11 +104,19 @@ const wordCount = post.data.words ?? getWordCount(post.body);
   .article-meta {
     margin-top: 1rem;
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 0.5rem;
     font-family: var(--font-mono);
     font-size: 0.85rem;
     color: var(--text-muted);
+  }
+
+  .article-tags {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.45rem;
   }
 
   .meta-dot {

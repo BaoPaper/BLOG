@@ -1,0 +1,97 @@
+---
+import type { CollectionEntry } from 'astro:content';
+
+interface Props {
+  post: CollectionEntry<'posts'>;
+}
+
+const { post } = Astro.props;
+
+const formatDate = (date: Date) => {
+  return date.toISOString().split('T')[0];
+};
+---
+
+<li class="post-item" data-tags={JSON.stringify(post.data.tags || [])}>
+  <span class="post-date">{formatDate(post.data.pubDate)}</span>
+  <div class="post-content">
+    <a href={`/posts/${post.id}`} class="post-title">
+      {post.data.title}
+    </a>
+    {
+      post.data.tags && post.data.tags.length > 0 && (
+        <div class="post-tags">
+          {post.data.tags.map((tag: string) => (
+            <a
+              href={`/tags/${encodeURIComponent(tag)}`}
+              class="post-tag"
+              data-tag={tag}
+            >
+              {tag}
+            </a>
+          ))}
+        </div>
+      )
+    }
+  </div>
+</li>
+
+<style>
+  .post-item {
+    display: flex;
+    align-items: baseline;
+    gap: 1.5rem;
+    font-size: 0.95rem;
+  }
+
+  .post-date {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    flex-shrink: 0;
+  }
+
+  .post-content {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .post-title {
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .post-title:hover {
+    color: var(--text-muted);
+  }
+
+  .post-tags {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex-shrink: 0;
+  }
+
+  @media (max-width: 560px) {
+    .post-item {
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .post-content {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.35rem;
+    }
+
+    .post-title {
+      white-space: normal;
+    }
+  }
+</style>

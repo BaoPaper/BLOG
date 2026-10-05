@@ -1,45 +1,186 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { getCollection } from 'astro:content';
+import PostItem from '../../components/PostItem.astro';
+import TagFilterBar from '../../components/TagFilterBar.astro';
 
 const posts = await getCollection('posts');
 const sortedPosts = posts.sort(
   (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf()
 );
 
-const formatDate = (date: Date) => {
-  return date.toISOString().split('T')[0];
-};
+// 提取所有标签及其文章数量
+const tagCounts = sortedPosts.reduce<Record<string, number>>((acc, post) => {
+  (post.data.tags || []).forEach((tag: string) => {
+    acc[tag] = (acc[tag] || 0) + 1;
+  });
+  return acc;
+}, {});
+
+// 按文章篇数降序排列标签
+const allTags = Object.keys(tagCounts).sort((a, b) => {
+  const diff = tagCounts[b] - tagCounts[a];
+  return diff !== 0 ? diff : a.localeCompare(b, 'zh-Hans-CN');
+});
 ---
 
 <BaseLayout title="文章" description="所有文章列表">
   <div class="posts-page">
     <header class="page-header">
       <h1 class="page-title">文章</h1>
-      <span class="posts-count">共 {sortedPosts.length} 篇</span>
+      <span class="posts-count" id="posts-count">共 {sortedPosts.length} 篇</span>
     </header>
 
-    <ul class="post-list">
-      {
-        sortedPosts.map((post) => (
-          <li class="post-item">
-            <span class="post-date">{formatDate(post.data.pubDate)}</span>
-            <a href={`/posts/${post.id}`} class="post-title">
-              {post.data.title}
-            </a>
-          </li>
-        ))
-      }
+    <TagFilterBar
+      allTags={allTags}
+      tagCounts={tagCounts}
+      totalCount={sortedPosts.length}
+    />
+
+    <ul class="post-list" id="post-list">
+      {sortedPosts.map((post) => <PostItem post={post} />)}
     </ul>
+
+    <div id="empty-state" class="empty-state" style="display: none;">
+      暂无该标签下的文章
+    </div>
   </div>
 </BaseLayout>
+
+<script>
+  function setupTagFilter() {
+    const postList = document.getElementById('post-list');
+    if (!postList || postList.dataset.tagFilterInitialized) return;
+    postList.dataset.tagFilterInitialized = 'true';
+
+    const filterBar = document.getElementById('tag-filter-bar');
+    const postsCount = document.getElementById('posts-count');
+    const emptyState = document.getElementById('empty-state');
+
+    const postItems = Array.from(
+      postList.querySelectorAll<HTMLLIElement>('.post-item')
+    );
+
+    function getTagFromLocation(): string | null {
+      const pathMatch = window.location.pathname.match(/^\/tags\/([^/]+)/);
+      if (pathMatch) return decodeURIComponent(pathMatch[1]);
+      return new URLSearchParams(window.location.search).get('tag');
+    }
+
+    function applyFilter(selectedTag: string | null, updateHistory: boolean = false) {
+      let visibleCount = 0;
+      const activeTag = selectedTag && selectedTag !== 'all' ? selectedTag : null;
+
+      // 更新列表显示
+      postItems.forEach((item) => {
+        const tags: string[] = JSON.parse(item.getAttribute('data-tags') || '[]');
+        const isMatch = !activeTag || tags.includes(activeTag);
+        item.style.display = isMatch ? '' : 'none';
+        if (isMatch) visibleCount++;
+      });
+
+      // 更新篇数计数
+      if (postsCount) {
+        postsCount.textContent = `共 ${visibleCount} 篇`;
+      }
+
+      // 更新空状态
+      if (emptyState) {
+        emptyState.style.display = visibleCount === 0 ? 'block' : 'none';
+      }
+
+      // 更新筛选栏按钮高亮与可访问性属性
+      if (filterBar) {
+        const chips = filterBar.querySelectorAll<HTMLAnchorElement>('.tag-chip');
+        chips.forEach((chip) => {
+          const chipTag = chip.getAttribute('data-tag');
+          const isActive = (!activeTag && chipTag === 'all') || chipTag === activeTag;
+          if (isActive) {
+            chip.classList.add('active');
+            chip.setAttribute('aria-current', 'true');
+          } else {
+            chip.classList.remove('active');
+            chip.removeAttribute('aria-current');
+          }
+        });
+      }
+
+      // 更新文章项里的标签高亮与可访问性属性
+      postItems.forEach((item) => {
+        const tags = item.querySelectorAll<HTMLAnchorElement>('.post-tag');
+        tags.forEach((tagEl) => {
+          const isActive = activeTag !== null && tagEl.getAttribute('data-tag') === activeTag;
+          if (isActive) {
+            tagEl.classList.add('active');
+            tagEl.setAttribute('aria-current', 'true');
+          } else {
+            tagEl.classList.remove('active');
+            tagEl.removeAttribute('aria-current');
+          }
+        });
+      });
+
+      // 更新 URL
+      if (updateHistory) {
+        const nextUrl = activeTag ? `/tags/${encodeURIComponent(activeTag)}` : '/posts';
+        window.history.pushState({}, '', nextUrl);
+      }
+    }
+
+    // 处理标签点击
+    function handleTagClick(e: MouseEvent) {
+      const target = (e.target as HTMLElement).closest<HTMLAnchorElement>('[data-tag]');
+      if (!target) return;
+
+      e.preventDefault();
+      const clickedTag = target.getAttribute('data-tag');
+      const currentUrlTag = getTagFromLocation();
+
+      // 如果点击已选中的标签或“全部”，则重置
+      if (!clickedTag || clickedTag === 'all' || clickedTag === currentUrlTag) {
+        applyFilter(null, true);
+      } else {
+        applyFilter(clickedTag, true);
+      }
+    }
+
+    // 绑定事件
+    if (filterBar) {
+      filterBar.addEventListener('click', handleTagClick);
+    }
+    postList.addEventListener('click', (e) => {
+      const target = (e.target as HTMLElement).closest<HTMLAnchorElement>('.post-tag');
+      if (target) {
+        handleTagClick(e);
+      }
+    });
+
+    // 监听前进后退
+    window.addEventListener('popstate', () => {
+      applyFilter(getTagFromLocation(), false);
+    });
+
+    // 初始化时从 URL 读取
+    const initialTag = getTagFromLocation();
+    if (initialTag) {
+      applyFilter(initialTag, false);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupTagFilter);
+  } else {
+    setupTagFilter();
+  }
+  document.addEventListener('astro:page-load', setupTagFilter);
+</script>
 
 <style>
   .page-header {
     display: flex;
     justify-content: space-between;
     align-items: baseline;
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
     padding-bottom: 0.5rem;
     border-bottom: 1px solid var(--border);
   }
@@ -62,32 +203,10 @@ const formatDate = (date: Date) => {
     gap: 1.25rem;
   }
 
-  .post-item {
-    display: flex;
-    align-items: baseline;
-    gap: 1.5rem;
-    font-size: 0.95rem;
-  }
-
-  .post-date {
-    font-family: var(--font-mono);
-    font-size: 0.85rem;
+  .empty-state {
+    margin: 3.5rem 0;
+    text-align: center;
     color: var(--text-muted);
-    flex-shrink: 0;
-  }
-
-  .post-title {
-    color: var(--text);
-  }
-
-  .post-title:hover {
-    color: var(--text-muted);
-  }
-
-  @media (max-width: 480px) {
-    .post-item {
-      flex-direction: column;
-      gap: 0.25rem;
-    }
+    font-size: 0.9rem;
   }
 </style>

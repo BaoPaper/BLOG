@@ -2,6 +2,7 @@
 title: "Hello World"
 pubDate: 2025-01-01
 description: "这是第一篇博客文章，记录 Bao's Paper 的开启。"
+tags: ["随笔", "思考"]
 ---
 
 欢迎来到这里。这是基于 Astro 搭建的个人博客。

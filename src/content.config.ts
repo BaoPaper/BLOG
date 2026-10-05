@@ -9,6 +9,13 @@ const posts = defineCollection({
     pubDate: z.coerce.date(),
     updatedDate: z.coerce.date().optional(),
     words: z.number().optional(),
+    tags: z
+      .preprocess((val) => {
+        if (!val) return [];
+        if (typeof val === 'string') return [val];
+        return val;
+      }, z.array(z.string()))
+      .default([]),
   }),
 });
 

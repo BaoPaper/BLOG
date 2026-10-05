@@ -1,15 +1,12 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { getCollection } from 'astro:content';
+import PostItem from '../components/PostItem.astro';
 
 const posts = await getCollection('posts');
 const recentPosts = posts
   .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
   .slice(0, 5);
-
-const formatDate = (date: Date) => {
-  return date.toISOString().split('T')[0];
-};
 ---
 
 <BaseLayout title="首页">
@@ -27,16 +24,7 @@ const formatDate = (date: Date) => {
     </div>
 
     <ul class="post-list">
-      {
-        recentPosts.map((post) => (
-          <li class="post-item">
-            <span class="post-date">{formatDate(post.data.pubDate)}</span>
-            <a href={`/posts/${post.id}`} class="post-title">
-              {post.data.title}
-            </a>
-          </li>
-        ))
-      }
+      {recentPosts.map((post) => <PostItem post={post} />)}
     </ul>
   </section>
 </BaseLayout>
@@ -94,34 +82,5 @@ const formatDate = (date: Date) => {
     display: flex;
     flex-direction: column;
     gap: 1.1rem;
-  }
-
-  .post-item {
-    display: flex;
-    align-items: baseline;
-    gap: 1.5rem;
-    font-size: 0.95rem;
-  }
-
-  .post-date {
-    font-family: var(--font-mono);
-    font-size: 0.85rem;
-    color: var(--text-muted);
-    flex-shrink: 0;
-  }
-
-  .post-title {
-    color: var(--text);
-  }
-
-  .post-title:hover {
-    color: var(--text-muted);
-  }
-
-  @media (max-width: 480px) {
-    .post-item {
-      flex-direction: column;
-      gap: 0.25rem;
-    }
   }
 </style>
