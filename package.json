@@ -12,12 +12,12 @@
     "astro": "astro"
   },
   "dependencies": {
-    "astro": "^7.3.5"
+    "astro": "^7.3.8"
   },
   "allowScripts": {
     "esbuild": true
   },
   "devDependencies": {
-    "@astrojs/markdown-remark": "^7.3.1"
+    "@astrojs/markdown-remark": "^7.3.2"
   }
 }
