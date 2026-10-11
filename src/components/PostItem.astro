@@ -5,17 +5,12 @@ import { formatDate } from '../utils/posts';
 interface Props {
   post: CollectionEntry<'posts'>;
   activeTag?: string | null;
-  hidden?: boolean;
 }
 
-const { post, activeTag = null, hidden = false } = Astro.props;
+const { post, activeTag = null } = Astro.props;
 ---
 
-<li
-  class="post-item"
-  data-tags={JSON.stringify(post.data.tags || [])}
-  style={hidden ? 'display: none;' : undefined}
->
+<li class="post-item">
   <div class="post-header">
     <div class="post-title-group">
       <a href={`/posts/${post.id}`} class="post-title">

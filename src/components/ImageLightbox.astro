@@ -106,7 +106,12 @@
 
   function setupImageLightbox() {
     const modal = document.getElementById('image-lightbox');
-    if (!modal || modal.dataset.lightboxInitialized) return;
+    if (!modal) {
+      windowAbortController?.abort();
+      windowAbortController = null;
+      return;
+    }
+    if (modal.dataset.lightboxInitialized) return;
     modal.dataset.lightboxInitialized = 'true';
 
     windowAbortController?.abort();
@@ -453,6 +458,15 @@
         }
       },
       { passive: true }
+    );
+
+    // 页面过渡切换前自动关闭灯箱，确保视图快照干净
+    document.addEventListener(
+      'astro:before-preparation',
+      () => {
+        if (isOpen) closeLightbox();
+      },
+      { signal }
     );
 
     // 窗口尺寸变化时重算基准尺寸

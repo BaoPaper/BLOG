@@ -2,7 +2,6 @@
 import type { CollectionEntry } from 'astro:content';
 import PostItem from './PostItem.astro';
 import TagFilterBar from './TagFilterBar.astro';
-import { SITE_TITLE } from '../consts';
 
 interface Props {
   posts: CollectionEntry<'posts'>[];
@@ -13,15 +12,15 @@ interface Props {
 
 const { posts, allTags, tagCounts, activeTag = null } = Astro.props;
 
-const initialVisibleCount = activeTag
-  ? posts.filter((post) => (post.data.tags || []).includes(activeTag)).length
-  : posts.length;
+const visiblePosts = activeTag
+  ? posts.filter((post) => (post.data.tags || []).includes(activeTag))
+  : posts;
 ---
 
-<div class="posts-page" id="posts-page" data-site-title={SITE_TITLE}>
+<div class="posts-page" id="posts-page">
   <header class="page-header">
     <h1 class="page-title">文章</h1>
-    <span class="posts-count" id="posts-count">共 {initialVisibleCount} 篇</span>
+    <span class="posts-count" id="posts-count">共 {visiblePosts.length} 篇</span>
   </header>
 
   <TagFilterBar
@@ -31,185 +30,20 @@ const initialVisibleCount = activeTag
     activeTag={activeTag}
   />
 
-  <ul class="post-list" id="post-list">
-    {
-      posts.map((post) => {
-        const isHidden = Boolean(
-          activeTag && !(post.data.tags || []).includes(activeTag)
-        );
-        return (
-          <PostItem post={post} activeTag={activeTag} hidden={isHidden} />
-        );
-      })
-    }
-  </ul>
-
-  <div
-    id="empty-state"
-    class="empty-state"
-    style={initialVisibleCount === 0 ? 'display: block;' : 'display: none;'}
-  >
-    暂无该标签下的文章
-  </div>
+  {
+    visiblePosts.length > 0 ? (
+      <ul class="post-list" id="post-list">
+        {visiblePosts.map((post) => (
+          <PostItem post={post} activeTag={activeTag} />
+        ))}
+      </ul>
+    ) : (
+      <div id="empty-state" class="empty-state">
+        暂无该标签下的文章
+      </div>
+    )
+  }
 </div>
-
-<script>
-  let popstateController: AbortController | null = null;
-
-  function setupTagFilter() {
-    const postList = document.getElementById('post-list');
-    if (!postList || postList.dataset.tagFilterInitialized) return;
-    postList.dataset.tagFilterInitialized = 'true';
-
-    const postsPage = document.getElementById('posts-page');
-    const siteTitle = postsPage?.getAttribute('data-site-title') || "Bao's Paper";
-    const filterBar = document.getElementById('tag-filter-bar');
-    const postsCount = document.getElementById('posts-count');
-    const emptyState = document.getElementById('empty-state');
-
-    const postItems = Array.from(
-      postList.querySelectorAll<HTMLLIElement>('.post-item')
-    );
-
-    function getTagFromLocation(): string | null {
-      const pathMatch = window.location.pathname.match(/^\/tags\/([^/]+)/);
-      if (pathMatch) return decodeURIComponent(pathMatch[1]);
-      return new URLSearchParams(window.location.search).get('tag');
-    }
-
-    function applyFilter(selectedTag: string | null, updateHistory: boolean = false) {
-      let visibleCount = 0;
-      const activeTag = selectedTag && selectedTag !== 'all' ? selectedTag : null;
-
-      // 更新列表显示
-      postItems.forEach((item) => {
-        const tags: string[] = JSON.parse(item.getAttribute('data-tags') || '[]');
-        const isMatch = !activeTag || tags.includes(activeTag);
-        item.style.display = isMatch ? '' : 'none';
-        if (isMatch) visibleCount++;
-      });
-
-      // 更新篇数计数
-      if (postsCount) {
-        postsCount.textContent = `共 ${visibleCount} 篇`;
-      }
-
-      // 更新空状态
-      if (emptyState) {
-        emptyState.style.display = visibleCount === 0 ? 'block' : 'none';
-      }
-
-      // 更新筛选栏按钮高亮、链接与可访问性属性
-      if (filterBar) {
-        const chips = filterBar.querySelectorAll<HTMLAnchorElement>('.tag-chip');
-        chips.forEach((chip) => {
-          const chipTag = chip.getAttribute('data-tag');
-          const isActive = (!activeTag && chipTag === 'all') || chipTag === activeTag;
-          if (isActive) {
-            chip.classList.add('active');
-            chip.setAttribute('aria-current', 'true');
-          } else {
-            chip.classList.remove('active');
-            chip.removeAttribute('aria-current');
-          }
-          if (chipTag && chipTag !== 'all') {
-            chip.setAttribute(
-              'href',
-              isActive ? '/posts' : `/tags/${encodeURIComponent(chipTag)}`
-            );
-          }
-        });
-      }
-
-      // 更新文章项里的标签高亮、链接与可访问性属性
-      postItems.forEach((item) => {
-        const tags = item.querySelectorAll<HTMLAnchorElement>('.post-tag');
-        tags.forEach((tagEl) => {
-          const tagValue = tagEl.getAttribute('data-tag');
-          const isActive = activeTag !== null && tagValue === activeTag;
-          if (isActive) {
-            tagEl.classList.add('active');
-            tagEl.setAttribute('aria-current', 'true');
-          } else {
-            tagEl.classList.remove('active');
-            tagEl.removeAttribute('aria-current');
-          }
-          if (tagValue) {
-            tagEl.setAttribute(
-              'href',
-              isActive ? '/posts' : `/tags/${encodeURIComponent(tagValue)}`
-            );
-          }
-        });
-      });
-
-      // 更新页面标题与 URL
-      document.title = activeTag
-        ? `标签: ${activeTag} | ${siteTitle}`
-        : `文章 | ${siteTitle}`;
-
-      if (updateHistory) {
-        const nextUrl = activeTag ? `/tags/${encodeURIComponent(activeTag)}` : '/posts';
-        window.history.pushState({}, '', nextUrl);
-      }
-    }
-
-    // 处理标签点击
-    function handleTagClick(e: MouseEvent) {
-      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) {
-        return;
-      }
-      const target = (e.target as HTMLElement).closest<HTMLAnchorElement>('[data-tag]');
-      if (!target) return;
-
-      e.preventDefault();
-      const clickedTag = target.getAttribute('data-tag');
-      const currentUrlTag = getTagFromLocation();
-
-      // 如果点击已选中的标签或“全部”，则重置为全部文章
-      if (!clickedTag || clickedTag === 'all' || clickedTag === currentUrlTag) {
-        applyFilter(null, true);
-      } else {
-        applyFilter(clickedTag, true);
-      }
-    }
-
-    // 绑定事件
-    if (filterBar) {
-      filterBar.addEventListener('click', handleTagClick);
-    }
-    postList.addEventListener('click', (e) => {
-      const target = (e.target as HTMLElement).closest<HTMLAnchorElement>('.post-tag');
-      if (target) {
-        handleTagClick(e);
-      }
-    });
-
-    // 监听前进后退（每次重新绑定前清理旧监听器）
-    popstateController?.abort();
-    popstateController = new AbortController();
-    window.addEventListener(
-      'popstate',
-      () => {
-        applyFilter(getTagFromLocation(), false);
-      },
-      { signal: popstateController.signal }
-    );
-
-    // 初始化时同步 URL 状态（例如 /posts?tag=xxx）
-    const initialTag = getTagFromLocation();
-    if (initialTag) {
-      applyFilter(initialTag, false);
-    }
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', setupTagFilter);
-  } else {
-    setupTagFilter();
-  }
-  document.addEventListener('astro:page-load', setupTagFilter);
-</script>
 
 <style>
   .page-header {
