@@ -13,9 +13,10 @@ export function formatDate(date: Date): string {
 export function sortPostsByDate(
   posts: CollectionEntry<'posts'>[]
 ): CollectionEntry<'posts'>[] {
-  return [...posts].sort(
-    (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf()
-  );
+  return [...posts].sort((a, b) => {
+    const diff = b.data.pubDate.valueOf() - a.data.pubDate.valueOf();
+    return diff !== 0 ? diff : a.id.localeCompare(b.id);
+  });
 }
 
 /**

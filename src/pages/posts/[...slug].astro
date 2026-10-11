@@ -3,17 +3,22 @@ import { getCollection, render } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import ImageLightbox from '../../components/ImageLightbox.astro';
 import CodeCopy from '../../components/CodeCopy.astro';
-import { formatDate, getWordCount } from '../../utils/posts';
+import { formatDate, getWordCount, sortPostsByDate } from '../../utils/posts';
 
 export async function getStaticPaths() {
   const posts = await getCollection('posts');
-  return posts.map((post) => ({
+  const sortedPosts = sortPostsByDate(posts);
+  return sortedPosts.map((post, index) => ({
     params: { slug: post.id },
-    props: { post },
+    props: {
+      post,
+      prevPost: sortedPosts[index - 1] ?? null,
+      nextPost: sortedPosts[index + 1] ?? null,
+    },
   }));
 }
 
-const { post } = Astro.props;
+const { post, prevPost, nextPost } = Astro.props;
 const { Content } = await render(post);
 
 // 优先使用 frontmatter 中显式声明的静态字数；若未指定则在构建阶段静态估算，客户端 0 JS 运行
@@ -33,6 +38,19 @@ const wordCount = post.data.words ?? getWordCount(post.body);
         <time datetime={post.data.pubDate.toISOString()}>
           {formatDate(post.data.pubDate)}
         </time>
+        {
+          post.data.updatedDate && (
+            <>
+              <span class="meta-dot">·</span>
+              <span class="updated-date">
+                更新于{' '}
+                <time datetime={post.data.updatedDate.toISOString()}>
+                  {formatDate(post.data.updatedDate)}
+                </time>
+              </span>
+            </>
+          )
+        }
         {
           wordCount !== undefined && (
             <>
@@ -61,6 +79,29 @@ const wordCount = post.data.words ?? getWordCount(post.body);
     <div class="prose">
       <Content />
     </div>
+
+    {
+      (prevPost || nextPost) && (
+        <nav class="post-nav" aria-label="文章导航">
+          {prevPost ? (
+            <a href={`/posts/${prevPost.id}`} class="post-nav-item prev">
+              <span class="post-nav-label">← 上一篇</span>
+              <span class="post-nav-title">{prevPost.data.title}</span>
+            </a>
+          ) : (
+            <div class="post-nav-placeholder" aria-hidden="true" />
+          )}
+          {nextPost ? (
+            <a href={`/posts/${nextPost.id}`} class="post-nav-item next">
+              <span class="post-nav-label">下一篇 →</span>
+              <span class="post-nav-title">{nextPost.data.title}</span>
+            </a>
+          ) : (
+            <div class="post-nav-placeholder" aria-hidden="true" />
+          )}
+        </nav>
+      )
+    }
   </article>
 
   <ImageLightbox />
@@ -108,5 +149,68 @@ const wordCount = post.data.words ?? getWordCount(post.body);
 
   .meta-dot {
     opacity: 0.6;
+  }
+
+  .post-nav {
+    margin-top: 3.5rem;
+    padding-top: 1.75rem;
+    border-top: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .post-nav-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius, 8px);
+    background-color: var(--bg);
+    text-decoration: none;
+    min-width: 0;
+  }
+
+  .post-nav-item:hover {
+    background-color: var(--code-bg);
+    border-color: rgba(128, 128, 128, 0.32);
+    opacity: 1;
+  }
+
+  .post-nav-item.next {
+    text-align: right;
+    align-items: flex-end;
+  }
+
+  .post-nav-label {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+
+  .post-nav-title {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+  }
+
+  @media (max-width: 560px) {
+    .post-nav {
+      grid-template-columns: 1fr;
+    }
+
+    .post-nav-placeholder {
+      display: none;
+    }
+
+    .post-nav-item.next {
+      text-align: left;
+      align-items: flex-start;
+    }
   }
 </style>

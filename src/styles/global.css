@@ -410,7 +410,6 @@ a:hover {
   padding: 0.1rem 0.4rem;
   border-radius: var(--radius-sm, 4px);
   background-color: rgba(128, 128, 128, 0.07);
-  transition: all 0.15s ease;
   text-decoration: none;
   line-height: 1.3;
 }
