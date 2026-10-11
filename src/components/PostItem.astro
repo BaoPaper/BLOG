@@ -16,62 +16,69 @@ const { post, activeTag = null, hidden = false } = Astro.props;
   data-tags={JSON.stringify(post.data.tags || [])}
   style={hidden ? 'display: none;' : undefined}
 >
-  <span class="post-date">{formatDate(post.data.pubDate)}</span>
-  <div class="post-content">
-    <a href={`/posts/${post.id}`} class="post-title">
-      {post.data.title}
-    </a>
-    {
-      post.data.tags && post.data.tags.length > 0 && (
-        <div class="post-tags">
-          {post.data.tags.map((tag: string) => {
-            const isActive = activeTag === tag;
-            return (
-              <a
-                href={isActive ? '/posts' : `/tags/${encodeURIComponent(tag)}`}
-                class:list={['post-tag', { active: isActive }]}
-                data-tag={tag}
-                aria-current={isActive ? 'true' : undefined}
-              >
-                {tag}
-              </a>
-            );
-          })}
-        </div>
-      )
-    }
+  <div class="post-header">
+    <div class="post-title-group">
+      <a href={`/posts/${post.id}`} class="post-title">
+        {post.data.title}
+      </a>
+      {
+        post.data.tags && post.data.tags.length > 0 && (
+          <div class="post-tags">
+            {post.data.tags.map((tag: string) => {
+              const isActive = activeTag === tag;
+              return (
+                <a
+                  href={isActive ? '/posts' : `/tags/${encodeURIComponent(tag)}`}
+                  class:list={['post-tag', { active: isActive }]}
+                  data-tag={tag}
+                  aria-current={isActive ? 'true' : undefined}
+                >
+                  {tag}
+                </a>
+              );
+            })}
+          </div>
+        )
+      }
+    </div>
+    <time class="post-date" datetime={post.data.pubDate.toISOString()}>
+      {formatDate(post.data.pubDate)}
+    </time>
   </div>
+  {
+    post.data.description && (
+      <p class="post-desc">{post.data.description}</p>
+    )
+  }
 </li>
 
 <style>
   .post-item {
     display: flex;
-    align-items: baseline;
-    gap: 1.5rem;
-    font-size: 0.95rem;
+    flex-direction: column;
+    gap: 0.3rem;
   }
 
-  .post-date {
-    font-family: var(--font-mono);
-    font-size: 0.85rem;
-    color: var(--text-muted);
-    flex-shrink: 0;
-  }
-
-  .post-content {
+  .post-header {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
     gap: 1rem;
-    flex: 1;
+  }
+
+  .post-title-group {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.35rem 0.6rem;
     min-width: 0;
   }
 
   .post-title {
+    font-size: 1rem;
+    font-weight: 500;
     color: var(--text);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    line-height: 1.5;
   }
 
   .post-title:hover {
@@ -81,24 +88,25 @@ const { post, activeTag = null, hidden = false } = Astro.props;
   .post-tags {
     display: inline-flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 0.35rem;
     flex-shrink: 0;
   }
 
-  @media (max-width: 560px) {
-    .post-item {
-      flex-direction: column;
-      gap: 0.35rem;
-    }
+  .post-date {
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    flex-shrink: 0;
+  }
 
-    .post-content {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 0.35rem;
-    }
-
-    .post-title {
-      white-space: normal;
-    }
+  .post-desc {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 </style>
