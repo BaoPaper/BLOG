@@ -1,93 +1,33 @@
 ---
 import { getCollection } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import PostItem from '../../components/PostItem.astro';
-import TagFilterBar from '../../components/TagFilterBar.astro';
+import PostsView from '../../components/PostsView.astro';
+import { sortPostsByDate, getTagStats } from '../../utils/posts';
 
 export async function getStaticPaths() {
   const posts = await getCollection('posts');
-  const sortedPosts = posts.sort(
-    (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf()
-  );
+  const sortedPosts = sortPostsByDate(posts);
+  const { tagCounts, allTags } = getTagStats(sortedPosts);
 
-  const tagCounts = sortedPosts.reduce<Record<string, number>>((acc, post) => {
-    (post.data.tags || []).forEach((tag: string) => {
-      acc[tag] = (acc[tag] || 0) + 1;
-    });
-    return acc;
-  }, {});
-
-  const allTags = Object.keys(tagCounts).sort((a, b) => {
-    const diff = tagCounts[b] - tagCounts[a];
-    return diff !== 0 ? diff : a.localeCompare(b, 'zh-Hans-CN');
-  });
-
-  return allTags.map((tag) => {
-    const filteredPosts = sortedPosts.filter((post) =>
-      (post.data.tags || []).includes(tag)
-    );
-
-    return {
-      params: { tag },
-      props: {
-        tag,
-        filteredPosts,
-        allTags,
-        tagCounts,
-        totalCount: sortedPosts.length,
-      },
-    };
-  });
+  return allTags.map((tag) => ({
+    params: { tag },
+    props: {
+      tag,
+      sortedPosts,
+      allTags,
+      tagCounts,
+    },
+  }));
 }
 
-const { tag, filteredPosts, allTags, tagCounts, totalCount } = Astro.props;
+const { tag, sortedPosts, allTags, tagCounts } = Astro.props;
 ---
 
 <BaseLayout title={`标签: ${tag}`} description={`包含“${tag}”标签的所有文章`}>
-  <div class="posts-page">
-    <header class="page-header">
-      <h1 class="page-title">文章</h1>
-      <span class="posts-count">共 {filteredPosts.length} 篇</span>
-    </header>
-
-    <TagFilterBar
-      allTags={allTags}
-      tagCounts={tagCounts}
-      totalCount={totalCount}
-      activeTag={tag}
-    />
-
-    <ul class="post-list" id="post-list">
-      {filteredPosts.map((post) => <PostItem post={post} />)}
-    </ul>
-  </div>
+  <PostsView
+    posts={sortedPosts}
+    allTags={allTags}
+    tagCounts={tagCounts}
+    activeTag={tag}
+  />
 </BaseLayout>
-
-<style>
-  .page-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    margin-bottom: 1.5rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .page-title {
-    font-size: 1.4rem;
-    font-weight: 600;
-    letter-spacing: -0.01em;
-  }
-
-  .posts-count {
-    font-size: 0.85rem;
-    color: var(--text-muted);
-  }
-
-  .post-list {
-    list-style: none;
-    display: flex;
-    flex-direction: column;
-    gap: 1.25rem;
-  }
-</style>

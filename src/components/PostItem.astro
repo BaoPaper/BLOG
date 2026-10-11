@@ -1,18 +1,21 @@
 ---
 import type { CollectionEntry } from 'astro:content';
+import { formatDate } from '../utils/posts';
 
 interface Props {
   post: CollectionEntry<'posts'>;
+  activeTag?: string | null;
+  hidden?: boolean;
 }
 
-const { post } = Astro.props;
-
-const formatDate = (date: Date) => {
-  return date.toISOString().split('T')[0];
-};
+const { post, activeTag = null, hidden = false } = Astro.props;
 ---
 
-<li class="post-item" data-tags={JSON.stringify(post.data.tags || [])}>
+<li
+  class="post-item"
+  data-tags={JSON.stringify(post.data.tags || [])}
+  style={hidden ? 'display: none;' : undefined}
+>
   <span class="post-date">{formatDate(post.data.pubDate)}</span>
   <div class="post-content">
     <a href={`/posts/${post.id}`} class="post-title">
@@ -21,15 +24,19 @@ const formatDate = (date: Date) => {
     {
       post.data.tags && post.data.tags.length > 0 && (
         <div class="post-tags">
-          {post.data.tags.map((tag: string) => (
-            <a
-              href={`/tags/${encodeURIComponent(tag)}`}
-              class="post-tag"
-              data-tag={tag}
-            >
-              {tag}
-            </a>
-          ))}
+          {post.data.tags.map((tag: string) => {
+            const isActive = activeTag === tag;
+            return (
+              <a
+                href={isActive ? '/posts' : `/tags/${encodeURIComponent(tag)}`}
+                class:list={['post-tag', { active: isActive }]}
+                data-tag={tag}
+                aria-current={isActive ? 'true' : undefined}
+              >
+                {tag}
+              </a>
+            );
+          })}
         </div>
       )
     }

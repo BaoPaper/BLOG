@@ -21,17 +21,20 @@ const { allTags, tagCounts, totalCount, activeTag = null } = Astro.props;
         全部
         <span class="tag-count">{totalCount}</span>
       </a>
-      {allTags.map((tag) => (
-        <a
-          href={`/tags/${encodeURIComponent(tag)}`}
-          class={`tag-chip ${activeTag === tag ? 'active' : ''}`}
-          data-tag={tag}
-          aria-current={activeTag === tag ? 'true' : undefined}
-        >
-          {tag}
-          <span class="tag-count">{tagCounts[tag]}</span>
-        </a>
-      ))}
+      {allTags.map((tag) => {
+        const isActive = activeTag === tag;
+        return (
+          <a
+            href={isActive ? '/posts' : `/tags/${encodeURIComponent(tag)}`}
+            class:list={['tag-chip', { active: isActive }]}
+            data-tag={tag}
+            aria-current={isActive ? 'true' : undefined}
+          >
+            {tag}
+            <span class="tag-count">{tagCounts[tag]}</span>
+          </a>
+        );
+      })}
     </nav>
   )
 }

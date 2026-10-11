@@ -2,11 +2,10 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { getCollection } from 'astro:content';
 import PostItem from '../components/PostItem.astro';
+import { sortPostsByDate } from '../utils/posts';
 
 const posts = await getCollection('posts');
-const recentPosts = posts
-  .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
-  .slice(0, 5);
+const recentPosts = sortPostsByDate(posts).slice(0, 5);
 ---
 
 <BaseLayout title="首页">

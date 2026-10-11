@@ -11,6 +11,7 @@ const { siteTitle = SITE_TITLE } = Astro.props;
 const pathname = Astro.url.pathname;
 const isCurrent = (path: string) => {
   if (path === '/') return pathname === '/';
+  if (path === '/posts') return pathname.startsWith('/posts') || pathname.startsWith('/tags');
   return pathname.startsWith(path);
 };
 ---
