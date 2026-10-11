@@ -21,18 +21,7 @@
         const codeText = (codeEl ? codeEl.innerText : pre.innerText).replace(/\n$/, '');
 
         try {
-          if (navigator.clipboard && window.isSecureContext) {
-            await navigator.clipboard.writeText(codeText);
-          } else {
-            const textarea = document.createElement('textarea');
-            textarea.value = codeText;
-            textarea.style.position = 'fixed';
-            textarea.style.opacity = '0';
-            document.body.appendChild(textarea);
-            textarea.select();
-            document.execCommand('copy');
-            textarea.remove();
-          }
+          await navigator.clipboard.writeText(codeText);
 
           btn.classList.add('copied');
           const textEl = btn.querySelector('.code-copy-text');

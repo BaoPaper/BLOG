@@ -1,54 +1,98 @@
 ---
-// 全屏极简图片视图组件：支持真实像素无损渲染、鼠标滚轮/手势缩放、一体化底部控制中心
+// 全屏极简图片视图组件：支持无闪烁切换、鼠标滚轮/手势缩放、键盘导航与无障碍焦点管理
 ---
 
-<!-- Lightbox 图片全屏/画廊视图模态框 -->
-<div id="image-lightbox" class="lightbox-modal" aria-hidden="true" role="dialog" aria-label="图片视图">
+<div
+  id="image-lightbox"
+  class="lightbox-modal"
+  role="dialog"
+  aria-modal="true"
+  aria-label="图片视图"
+  inert
+>
   <div class="lightbox-backdrop"></div>
 
-  <!-- 视口与全屏图片承载区 -->
+  <!-- 视口与图片承载区 -->
   <div class="lightbox-viewport" id="lightbox-viewport">
     <div class="lightbox-stage" id="lightbox-stage">
-      <img id="lightbox-image" class="lightbox-img" src="" alt="" draggable="false" />
+      <img id="lightbox-image" class="lightbox-img" alt="" draggable="false" />
     </div>
   </div>
 
   <!-- 底部悬浮控制中心与独立图注区 -->
   <div class="lightbox-bottombar">
-    <!-- 独立悬浮图注：位于 Dock 正上方，不影响 Dock 控制按钮的尺寸与定位 -->
-    <div class="lightbox-caption-badge" id="lightbox-caption">
+    <div class="lightbox-caption-badge" id="lightbox-caption" hidden>
       <span class="caption-text" id="lightbox-caption-text"></span>
     </div>
 
-    <!-- 纯粹操作控制中心 (Dock)：尺寸恒定，按钮坐标绝对静止防抖动 -->
     <div class="lightbox-dock" id="lightbox-dock">
-      <!-- 上一张 -->
-      <button class="dock-btn dock-nav-btn" id="lightbox-btn-prev" title="上一张 (←)" aria-label="上一张图片">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <button
+        type="button"
+        class="dock-btn dock-nav-btn"
+        id="lightbox-btn-prev"
+        title="上一张 (←)"
+        aria-label="上一张图片"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          width="16"
+          height="16"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
           <polyline points="15 18 9 12 15 6"></polyline>
         </svg>
       </button>
 
-      <!-- 多图计数器 -->
       <div class="dock-counter" id="lightbox-counter">
         <span id="lightbox-index">1</span>
         <span class="dock-sep">/</span>
         <span id="lightbox-total">1</span>
       </div>
 
-      <!-- 下一张 -->
-      <button class="dock-btn dock-nav-btn" id="lightbox-btn-next" title="下一张 (→)" aria-label="下一张图片">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <button
+        type="button"
+        class="dock-btn dock-nav-btn"
+        id="lightbox-btn-next"
+        title="下一张 (→)"
+        aria-label="下一张图片"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          width="16"
+          height="16"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
           <polyline points="9 18 15 12 9 6"></polyline>
         </svg>
       </button>
 
-      <!-- 分割线 -->
       <span class="dock-divider" id="lightbox-dock-divider"></span>
 
-      <!-- 关闭按钮 -->
-      <button class="dock-btn dock-close-btn" id="lightbox-btn-close" title="关闭 (Esc)" aria-label="关闭图片视图">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <button
+        type="button"
+        class="dock-btn dock-close-btn"
+        id="lightbox-btn-close"
+        title="关闭 (Esc)"
+        aria-label="关闭图片视图"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          width="16"
+          height="16"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
           <line x1="18" y1="6" x2="6" y2="18"></line>
           <line x1="6" y1="6" x2="18" y2="18"></line>
         </svg>
@@ -58,18 +102,18 @@
 </div>
 
 <script>
-  interface GalleryItem {
-    src: string;
-    alt: string;
-    imgEl: HTMLImageElement;
-  }
+  let windowAbortController: AbortController | null = null;
 
   function setupImageLightbox() {
     const modal = document.getElementById('image-lightbox');
     if (!modal || modal.dataset.lightboxInitialized) return;
     modal.dataset.lightboxInitialized = 'true';
 
-    const imgElement = document.getElementById('lightbox-image') as HTMLImageElement;
+    windowAbortController?.abort();
+    windowAbortController = new AbortController();
+    const { signal } = windowAbortController;
+
+    const imgElement = document.getElementById('lightbox-image') as HTMLImageElement | null;
     const stage = document.getElementById('lightbox-stage');
     const viewport = document.getElementById('lightbox-viewport');
     const captionContainer = document.getElementById('lightbox-caption');
@@ -79,211 +123,205 @@
     const counterContainer = document.getElementById('lightbox-counter');
     const divider = document.getElementById('lightbox-dock-divider');
 
-    const btnClose = document.getElementById('lightbox-btn-close');
-    const btnPrev = document.getElementById('lightbox-btn-prev');
-    const btnNext = document.getElementById('lightbox-btn-next');
-    const backdrop = modal.querySelector('.lightbox-backdrop');
+    const btnClose = document.getElementById('lightbox-btn-close') as HTMLButtonElement | null;
+    const btnPrev = document.getElementById('lightbox-btn-prev') as HTMLButtonElement | null;
+    const btnNext = document.getElementById('lightbox-btn-next') as HTMLButtonElement | null;
+    const backdrop = modal.querySelector<HTMLElement>('.lightbox-backdrop');
 
     if (!imgElement || !stage || !viewport) return;
 
-    const proseImgs = Array.from(document.querySelectorAll<HTMLImageElement>('.prose img:not(.link-favicon)'));
-    if (proseImgs.length === 0) return;
+    const gallery = Array.from(
+      document.querySelectorAll<HTMLImageElement>('.prose img:not(.link-favicon)')
+    );
+    if (gallery.length === 0) return;
 
-    const gallery: GalleryItem[] = [];
-
-    proseImgs.forEach((img) => {
-      if (img.classList.contains('link-favicon')) return;
-      const altText = (img.getAttribute('alt') || img.getAttribute('title') || '').trim();
-      const currentSrc = img.currentSrc || img.getAttribute('src') || '';
-      
-      const itemIndex = gallery.length;
-      gallery.push({ src: currentSrc, alt: altText, imgEl: img });
-
-      if (img.dataset.lightboxBound) return;
-      img.dataset.lightboxBound = 'true';
-
-      img.addEventListener('click', (e) => {
-        e.preventDefault();
-        openLightbox(itemIndex);
-      });
-    });
+    const MIN_SCALE = 0.5;
+    const MAX_SCALE = 5;
 
     let currentIndex = 0;
     let isOpen = false;
-    let previousActiveElement: HTMLElement | null = null;
+    let loadSequence = 0;
 
     let baseWidth = 0;
     let baseHeight = 0;
-
     let scale = 1;
     let translateX = 0;
     let translateY = 0;
 
     let isDragging = false;
+    let hasDragged = false;
     let dragStartX = 0;
     let dragStartY = 0;
-    let dragStartTranslateX = 0;
-    let dragStartTranslateY = 0;
-    let hasDragged = false;
+    let dragOriginX = 0;
+    let dragOriginY = 0;
 
+    let isPinching = false;
+    let initialPinchDistance = 0;
+    let initialPinchScale = 1;
     let touchStartX = 0;
     let touchStartY = 0;
     let touchStartTime = 0;
-    let initialPinchDistance = 0;
-    let initialPinchScale = 1;
-    let isPinching = false;
 
-    const MIN_SCALE = 0.5;
-    const MAX_SCALE = 5;
-
-    // 真实高清物理像素驱动
-    const applyDimensions = () => {
-      const renderW = Math.round(baseWidth * scale);
-      const renderH = Math.round(baseHeight * scale);
-
-      imgElement.style.width = `${renderW}px`;
-      imgElement.style.height = `${renderH}px`;
-
+    const updateTransform = () => {
+      imgElement.style.width = `${Math.round(baseWidth * scale)}px`;
+      imgElement.style.height = `${Math.round(baseHeight * scale)}px`;
       stage.style.transform = `translate3d(${Math.round(translateX)}px, ${Math.round(translateY)}px, 0)`;
-
-      if (viewport) {
-        viewport.style.cursor = scale > 1 ? (isDragging ? 'grabbing' : 'grab') : 'default';
-      }
+      viewport.style.cursor = scale > 1 ? (isDragging ? 'grabbing' : 'grab') : 'default';
     };
 
     const resetTransform = () => {
       scale = 1;
       translateX = 0;
       translateY = 0;
-      applyDimensions();
+      updateTransform();
     };
 
-    const zoomTo = (targetScale: number, centerX?: number, centerY?: number) => {
+    const fitImageToViewport = (naturalW: number, naturalH: number) => {
+      const safeW = naturalW || window.innerWidth;
+      const safeH = naturalH || window.innerHeight;
+
+      const padX = window.innerWidth > 640 ? 40 : 20;
+      const padTop = window.innerWidth > 640 ? 40 : 20;
+      const padBottom = window.innerWidth > 640 ? 110 : 96;
+
+      const availW = Math.max(window.innerWidth - padX * 2, 100);
+      const availH = Math.max(window.innerHeight - padTop - padBottom, 100);
+
+      const ratio = Math.min(availW / safeW, availH / safeH, 1);
+      baseWidth = safeW * ratio;
+      baseHeight = safeH * ratio;
+      resetTransform();
+    };
+
+    const zoomTo = (targetScale: number, centerX: number, centerY: number) => {
       const nextScale = Math.min(Math.max(targetScale, MIN_SCALE), MAX_SCALE);
       if (Math.abs(nextScale - scale) < 0.001) return;
-
-      if (centerX !== undefined && centerY !== undefined) {
-        const originX = centerX - (window.innerWidth / 2 + translateX);
-        const originY = centerY - (window.innerHeight / 2 + translateY);
-        const ratio = nextScale / scale;
-
-        translateX = centerX - window.innerWidth / 2 - originX * ratio;
-        translateY = centerY - window.innerHeight / 2 - originY * ratio;
-      }
 
       if (nextScale <= 1) {
         translateX = 0;
         translateY = 0;
+      } else {
+        const offsetX = centerX - window.innerWidth / 2 - translateX;
+        const offsetY = centerY - window.innerHeight / 2 - translateY;
+        const factor = nextScale / scale;
+        translateX -= offsetX * (factor - 1);
+        translateY -= offsetY * (factor - 1);
       }
 
       scale = nextScale;
-      applyDimensions();
+      updateTransform();
     };
 
-    const calculateBaseDimensions = () => {
-      const naturalW = imgElement.naturalWidth || window.innerWidth;
-      const naturalH = imgElement.naturalHeight || window.innerHeight;
-
-      // 预留两侧与上下安全边距，避免大图紧贴边缘或被底部控制条遮挡
-      const horizontalPadding = window.innerWidth > 640 ? 40 : 20;
-      const topPadding = window.innerWidth > 640 ? 40 : 20;
-      const bottomPadding = window.innerWidth > 640 ? 110 : 96;
-
-      const availableW = Math.max(window.innerWidth - horizontalPadding * 2, 100);
-      const availableH = Math.max(window.innerHeight - topPadding - bottomPadding, 100);
-
-      // 原图小于可用区域保持 1:1，原图大于可用区域等比收缩
-      const fitRatio = Math.min(availableW / naturalW, availableH / naturalH, 1);
-      baseWidth = naturalW * fitRatio;
-      baseHeight = naturalH * fitRatio;
-
-      resetTransform();
-    };
-
-    const updateView = () => {
-      const current = gallery[currentIndex];
-      if (!current) return;
-
-      imgElement.src = current.src;
-      imgElement.alt = current.alt || '';
-
-      const hasAlt = Boolean(current.alt);
-      if (captionText) {
-        captionText.textContent = current.alt || '';
-      }
-      if (captionContainer) {
-        captionContainer.style.display = hasAlt ? '' : 'none';
-      }
+    const updateToolbar = (alt: string) => {
+      if (captionText) captionText.textContent = alt;
+      if (captionContainer) captionContainer.hidden = !alt;
 
       if (indexText) indexText.textContent = String(currentIndex + 1);
       if (totalText) totalText.textContent = String(gallery.length);
 
-      // 单图 / 多图自适应控制元素呈现
       const isMulti = gallery.length > 1;
       if (btnPrev) btnPrev.style.display = isMulti ? 'inline-flex' : 'none';
       if (btnNext) btnNext.style.display = isMulti ? 'inline-flex' : 'none';
       if (counterContainer) counterContainer.style.display = isMulti ? 'inline-flex' : 'none';
+      if (divider) divider.style.display = isMulti ? 'block' : 'none';
+    };
 
-      // 单图时无多图导航，分割线可隐藏保持极端精致
-      if (divider) {
-        divider.style.display = isMulti ? 'block' : 'none';
-      }
+    const showSlide = async (index: number) => {
+      const sourceImg = gallery[index];
+      if (!sourceImg) return;
 
-      if (imgElement.complete && imgElement.naturalWidth > 0) {
-        calculateBaseDimensions();
+      currentIndex = index;
+      const seq = ++loadSequence;
+
+      const src = sourceImg.currentSrc || sourceImg.getAttribute('src') || '';
+      const alt = (sourceImg.getAttribute('alt') || sourceImg.getAttribute('title') || '').trim();
+
+      updateToolbar(alt);
+
+      // 先隐藏画布并清空旧图，杜绝上一张图片残影闪烁
+      imgElement.style.opacity = '0';
+      if (sourceImg.complete && sourceImg.naturalWidth > 0) {
+        fitImageToViewport(sourceImg.naturalWidth, sourceImg.naturalHeight);
       } else {
-        imgElement.onload = () => {
-          calculateBaseDimensions();
-        };
+        resetTransform();
       }
+
+      imgElement.alt = alt;
+      if (imgElement.getAttribute('src') !== src) {
+        imgElement.src = src;
+      }
+
+      try {
+        if (typeof imgElement.decode === 'function') {
+          await imgElement.decode();
+        }
+      } catch {
+        // 忽略 decode 异常，回退使用 naturalWidth
+      }
+
+      if (seq !== loadSequence || !isOpen) return;
+
+      const natW = imgElement.naturalWidth || sourceImg.naturalWidth;
+      const natH = imgElement.naturalHeight || sourceImg.naturalHeight;
+      fitImageToViewport(natW, natH);
+      imgElement.style.opacity = '1';
     };
 
     const openLightbox = (index: number) => {
-      previousActiveElement = document.activeElement as HTMLElement | null;
-      currentIndex = index;
       isOpen = true;
+      modal.removeAttribute('inert');
       modal.classList.add('is-active');
-      modal.setAttribute('aria-hidden', 'false');
       document.body.style.overflow = 'hidden';
-      updateView();
-      btnClose?.focus?.();
+      void showSlide(index);
+      btnClose?.focus({ preventScroll: true });
     };
 
     const closeLightbox = () => {
       if (!isOpen) return;
       isOpen = false;
-      modal.classList.remove('is-active');
-      modal.setAttribute('aria-hidden', 'true');
-      document.body.style.overflow = '';
-      resetTransform();
-      if (previousActiveElement && typeof previousActiveElement.focus === 'function') {
-        previousActiveElement.focus();
+      loadSequence++;
+
+      // 在设置 inert 前先移除内部元素焦点，彻底消除 WAI-ARIA 焦点警告
+      if (modal.contains(document.activeElement)) {
+        (document.activeElement as HTMLElement).blur();
       }
+
+      modal.classList.remove('is-active');
+      modal.setAttribute('inert', '');
+      document.body.style.overflow = '';
+
+      // 清空图片源与尺寸，避免下次打开时闪现旧图
+      imgElement.style.opacity = '0';
+      imgElement.removeAttribute('src');
+      resetTransform();
     };
 
     const prevImage = () => {
       if (gallery.length <= 1) return;
-      currentIndex = (currentIndex - 1 + gallery.length) % gallery.length;
-      updateView();
+      void showSlide((currentIndex - 1 + gallery.length) % gallery.length);
     };
 
     const nextImage = () => {
       if (gallery.length <= 1) return;
-      currentIndex = (currentIndex + 1) % gallery.length;
-      updateView();
+      void showSlide((currentIndex + 1) % gallery.length);
     };
+
+    // 绑定正文图片点击事件
+    gallery.forEach((img, idx) => {
+      if (img.dataset.lightboxBound) return;
+      img.dataset.lightboxBound = 'true';
+      img.addEventListener('click', (e) => {
+        e.preventDefault();
+        openLightbox(idx);
+      });
+    });
 
     btnClose?.addEventListener('click', closeLightbox);
     backdrop?.addEventListener('click', closeLightbox);
     btnPrev?.addEventListener('click', prevImage);
     btnNext?.addEventListener('click', nextImage);
 
-    window.addEventListener('resize', () => {
-      if (isOpen) {
-        calculateBaseDimensions();
-      }
-    });
-
+    // 鼠标双击缩放
     viewport.addEventListener('dblclick', (e) => {
       e.preventDefault();
       if (scale > 1.05) {
@@ -293,153 +331,184 @@
       }
     });
 
-    viewport.addEventListener('wheel', (e) => {
-      e.preventDefault();
-      const delta = e.deltaY < 0 ? 0.25 : -0.25;
-      zoomTo(scale + delta, e.clientX, e.clientY);
-    }, { passive: false });
+    // 鼠标滚轮缩放
+    viewport.addEventListener(
+      'wheel',
+      (e) => {
+        e.preventDefault();
+        const delta = e.deltaY < 0 ? 0.25 : -0.25;
+        zoomTo(scale + delta, e.clientX, e.clientY);
+      },
+      { passive: false }
+    );
 
+    // 鼠标拖拽平移（仅在放大状态下启用拖拽）
     viewport.addEventListener('mousedown', (e) => {
       if (e.button !== 0) return;
-      isDragging = true;
       hasDragged = false;
+      if (scale <= 1) return;
+
+      isDragging = true;
       dragStartX = e.clientX;
       dragStartY = e.clientY;
-      dragStartTranslateX = translateX;
-      dragStartTranslateY = translateY;
+      dragOriginX = translateX;
+      dragOriginY = translateY;
+      updateTransform();
     });
 
-    window.addEventListener('mousemove', (e) => {
-      if (!isDragging || !isOpen) return;
-      const dx = e.clientX - dragStartX;
-      const dy = e.clientY - dragStartY;
+    window.addEventListener(
+      'mousemove',
+      (e) => {
+        if (!isDragging || !isOpen) return;
+        const dx = e.clientX - dragStartX;
+        const dy = e.clientY - dragStartY;
 
-      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
-        hasDragged = true;
-      }
-
-      if (scale > 1) {
-        translateX = dragStartTranslateX + dx;
-        translateY = dragStartTranslateY + dy;
-        applyDimensions();
-      }
-    });
-
-    window.addEventListener('mouseup', () => {
-      if (isDragging) {
-        isDragging = false;
-        if (viewport) {
-          viewport.style.cursor = scale > 1 ? 'grab' : 'default';
+        if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+          hasDragged = true;
         }
-      }
-    });
 
+        translateX = dragOriginX + dx;
+        translateY = dragOriginY + dy;
+        updateTransform();
+      },
+      { signal }
+    );
+
+    window.addEventListener(
+      'mouseup',
+      () => {
+        if (!isDragging) return;
+        isDragging = false;
+        updateTransform();
+      },
+      { signal }
+    );
+
+    // 点击空白背景关闭
     viewport.addEventListener('click', (e) => {
       if ((e.target === viewport || e.target === stage) && !hasDragged) {
         closeLightbox();
       }
+      hasDragged = false;
     });
 
-    const getTouchDistance = (t1: Touch, t2: Touch) => {
-      return Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
-    };
+    // 触摸手势：双指缩放、放大后单指平移、未放大时单指左右滑动切图
+    const getTouchDistance = (t1: Touch, t2: Touch) =>
+      Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
 
-    viewport.addEventListener('touchstart', (e) => {
-      if (e.touches.length === 1) {
-        isPinching = false;
-        touchStartX = e.touches[0].clientX;
-        touchStartY = e.touches[0].clientY;
-        touchStartTime = Date.now();
-        dragStartTranslateX = translateX;
-        dragStartTranslateY = translateY;
-      } else if (e.touches.length === 2) {
-        isPinching = true;
-        initialPinchDistance = getTouchDistance(e.touches[0], e.touches[1]);
-        initialPinchScale = scale;
-      }
-    }, { passive: true });
+    viewport.addEventListener(
+      'touchstart',
+      (e) => {
+        if (e.touches.length === 1) {
+          isPinching = false;
+          touchStartX = e.touches[0].clientX;
+          touchStartY = e.touches[0].clientY;
+          touchStartTime = Date.now();
+          dragOriginX = translateX;
+          dragOriginY = translateY;
+        } else if (e.touches.length === 2) {
+          isPinching = true;
+          initialPinchDistance = getTouchDistance(e.touches[0], e.touches[1]);
+          initialPinchScale = scale;
+        }
+      },
+      { passive: true }
+    );
 
-    viewport.addEventListener('touchmove', (e) => {
-      if (isPinching && e.touches.length === 2) {
-        const currentDistance = getTouchDistance(e.touches[0], e.touches[1]);
-        if (initialPinchDistance > 0) {
-          const factor = currentDistance / initialPinchDistance;
-          const targetScale = Math.min(Math.max(initialPinchScale * factor, MIN_SCALE), MAX_SCALE);
+    viewport.addEventListener(
+      'touchmove',
+      (e) => {
+        if (isPinching && e.touches.length === 2 && initialPinchDistance > 0) {
+          const dist = getTouchDistance(e.touches[0], e.touches[1]);
           const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
           const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-          zoomTo(targetScale, midX, midY);
+          zoomTo(initialPinchScale * (dist / initialPinchDistance), midX, midY);
+        } else if (!isPinching && e.touches.length === 1 && scale > 1) {
+          translateX = dragOriginX + (e.touches[0].clientX - touchStartX);
+          translateY = dragOriginY + (e.touches[0].clientY - touchStartY);
+          updateTransform();
         }
-      } else if (!isPinching && e.touches.length === 1 && scale > 1) {
-        const dx = e.touches[0].clientX - touchStartX;
-        const dy = e.touches[0].clientY - touchStartY;
-        translateX = dragStartTranslateX + dx;
-        translateY = dragStartTranslateY + dy;
-        applyDimensions();
-      }
-    }, { passive: true });
+      },
+      { passive: true }
+    );
 
-    viewport.addEventListener('touchend', (e) => {
-      if (isPinching && e.touches.length < 2) {
-        isPinching = false;
-        if (scale <= 1) {
-          resetTransform();
+    viewport.addEventListener(
+      'touchend',
+      (e) => {
+        if (isPinching && e.touches.length < 2) {
+          isPinching = false;
+          if (scale <= 1) resetTransform();
+          return;
         }
-        return;
-      }
 
-      if (scale <= 1 && e.changedTouches.length === 1) {
-        const touchEndX = e.changedTouches[0].clientX;
-        const touchEndY = e.changedTouches[0].clientY;
-        const deltaX = touchEndX - touchStartX;
-        const deltaY = touchEndY - touchStartY;
-        const duration = Date.now() - touchStartTime;
+        if (scale <= 1 && e.changedTouches.length === 1) {
+          const dx = e.changedTouches[0].clientX - touchStartX;
+          const dy = e.changedTouches[0].clientY - touchStartY;
+          const elapsed = Date.now() - touchStartTime;
 
-        if (Math.abs(deltaX) > 45 && Math.abs(deltaX) > Math.abs(deltaY) * 1.5 && duration < 400) {
-          if (deltaX < 0) {
-            nextImage();
-          } else {
-            prevImage();
+          if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.5 && elapsed < 400) {
+            if (dx < 0) nextImage();
+            else prevImage();
           }
         }
-      }
-    }, { passive: true });
+      },
+      { passive: true }
+    );
 
-    window.addEventListener('keydown', (e) => {
-      if (!isOpen) return;
+    // 窗口尺寸变化时重算基准尺寸
+    window.addEventListener(
+      'resize',
+      () => {
+        if (!isOpen) return;
+        const sourceImg = gallery[currentIndex];
+        const natW = imgElement.naturalWidth || sourceImg?.naturalWidth || window.innerWidth;
+        const natH = imgElement.naturalHeight || sourceImg?.naturalHeight || window.innerHeight;
+        fitImageToViewport(natW, natH);
+      },
+      { signal }
+    );
 
-      switch (e.key) {
-        case 'Escape':
-          e.preventDefault();
-          closeLightbox();
-          break;
-        case 'ArrowLeft':
-        case 'a':
-        case 'A':
-          e.preventDefault();
-          prevImage();
-          break;
-        case 'ArrowRight':
-        case 'd':
-        case 'D':
-          e.preventDefault();
-          nextImage();
-          break;
-        case '+':
-        case '=':
-          e.preventDefault();
-          zoomTo(scale + 0.35, window.innerWidth / 2, window.innerHeight / 2);
-          break;
-        case '-':
-        case '_':
-          e.preventDefault();
-          zoomTo(scale - 0.35, window.innerWidth / 2, window.innerHeight / 2);
-          break;
-        case '0':
-          e.preventDefault();
-          resetTransform();
-          break;
-      }
-    });
+    // 键盘快捷键（忽略带 Ctrl/Meta/Alt 的系统级组合键）
+    window.addEventListener(
+      'keydown',
+      (e) => {
+        if (!isOpen || e.ctrlKey || e.metaKey || e.altKey) return;
+
+        switch (e.key) {
+          case 'Escape':
+            e.preventDefault();
+            closeLightbox();
+            break;
+          case 'ArrowLeft':
+          case 'a':
+          case 'A':
+            e.preventDefault();
+            prevImage();
+            break;
+          case 'ArrowRight':
+          case 'd':
+          case 'D':
+            e.preventDefault();
+            nextImage();
+            break;
+          case '+':
+          case '=':
+            e.preventDefault();
+            zoomTo(scale + 0.35, window.innerWidth / 2, window.innerHeight / 2);
+            break;
+          case '-':
+          case '_':
+            e.preventDefault();
+            zoomTo(scale - 0.35, window.innerWidth / 2, window.innerHeight / 2);
+            break;
+          case '0':
+            e.preventDefault();
+            resetTransform();
+            break;
+        }
+      },
+      { signal }
+    );
   }
 
   if (document.readyState === 'loading') {
@@ -492,6 +561,7 @@
     align-items: center;
     justify-content: center;
     transform-origin: center center;
+    will-change: transform;
   }
 
   .lightbox-img {
@@ -500,13 +570,12 @@
     max-width: none !important;
     max-height: none !important;
     border-radius: var(--radius, 8px);
-    image-rendering: -webkit-optimize-contrast;
-    image-rendering: high-quality;
     pointer-events: none;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+    opacity: 0;
   }
 
-  /* 底部悬浮控制中心与图注容器 (Bottom Bar) */
+  /* 底部悬浮控制中心与图注容器 */
   .lightbox-bottombar {
     position: absolute;
     bottom: 0;
@@ -522,7 +591,7 @@
     pointer-events: none;
   }
 
-  /* 独立悬浮图注：轻量半透明胶囊，不干扰 Dock 尺寸 */
+  /* 独立悬浮图注：轻量半透明胶囊 */
   .lightbox-caption-badge {
     pointer-events: auto;
     font-size: 0.82rem;
@@ -541,11 +610,15 @@
     user-select: none;
   }
 
+  .lightbox-caption-badge[hidden] {
+    display: none !important;
+  }
+
   .lightbox-caption-badge .caption-text {
     letter-spacing: 0.01em;
   }
 
-  /* 纯粹控制中心 (Dock)：宽度物理恒定，按键位置绝不发生漂移 */
+  /* 纯粹控制中心 (Dock) */
   .lightbox-dock {
     pointer-events: auto;
     display: inline-flex;
@@ -561,7 +634,6 @@
     color: #ffffff;
   }
 
-  /* 胶囊内的通用按钮 */
   .dock-btn {
     display: inline-flex;
     align-items: center;
@@ -586,7 +658,6 @@
     background: rgba(255, 255, 255, 0.25);
   }
 
-  /* 计数器 */
   .dock-counter {
     display: inline-flex;
     align-items: center;
@@ -603,7 +674,6 @@
     opacity: 0.4;
   }
 
-  /* 分割细线 */
   .dock-divider {
     width: 1px;
     height: 14px;
@@ -612,7 +682,6 @@
     flex-shrink: 0;
   }
 
-  /* 移动端针对控制中心胶囊的适配 */
   @media (max-width: 640px) {
     .lightbox-bottombar {
       padding: 1rem 1rem 1.25rem 1rem;

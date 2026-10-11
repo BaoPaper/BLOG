@@ -73,8 +73,8 @@ export async function getOrFetchFavicon(hostname) {
         return null;
       }
 
-      const buffer = Buffer.from(await response.arrayBuffer());
-      if (buffer.length === 0) {
+      const buffer = new Uint8Array(await response.arrayBuffer());
+      if (buffer.byteLength === 0) {
         failedDomains.add(hostname);
         return null;
       }

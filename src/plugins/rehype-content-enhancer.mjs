@@ -52,7 +52,8 @@ const LANG_MAP = {
 
 function formatLang(rawLang) {
   if (!rawLang) return 'Code';
-  const clean = rawLang.trim().toLowerCase();
+  const clean = rawLang.toString().trim().split(/[\s{]/)[0].toLowerCase();
+  if (!clean) return 'Code';
   if (LANG_MAP[clean]) return LANG_MAP[clean];
   return clean.charAt(0).toUpperCase() + clean.slice(1);
 }
@@ -85,7 +86,7 @@ export function rehypeContentEnhancer() {
   return async (tree) => {
     const externalLinkTasks = [];
 
-    walkTree(tree, (node, index, parent) => {
+    walkTree(tree, (node, _index, parent) => {
       // 1. 静态图注转换：检测仅包含单张图片的段落或带有 alt 的图片
       if (node.type === 'element' && node.tagName === 'p') {
         const nonWhitespaceChildren = (node.children || []).filter(
@@ -129,7 +130,6 @@ export function rehypeContentEnhancer() {
         }
 
         // 检查 pre 或者内部 code 的 class
-                // 检查 pre 或者内部 code 的 class
         let rawLang =
           node.properties?.dataLanguage ||
           node.properties?.['data-language'] ||
@@ -321,7 +321,6 @@ export function rehypeContentEnhancer() {
                 loading: 'lazy',
                 decoding: 'async',
                 'aria-hidden': 'true',
-                onerror: "this.style.display='none'",
               },
               children: [],
             };
