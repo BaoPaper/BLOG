@@ -1,5 +1,6 @@
 import type { APIContext } from 'astro';
-import { getCollection } from 'astro:content';
+import { experimental_AstroContainer as AstroContainer } from 'astro/container';
+import { getCollection, render } from 'astro:content';
 import { SITE_TITLE, SITE_DESCRIPTION, SITE_URL } from '../consts';
 import { sortPostsByDate } from '../utils/posts';
 
@@ -43,6 +44,7 @@ function wrapCdata(content: string): string {
 export async function GET(context: APIContext) {
   const posts = await getCollection('posts');
   const sortedPosts = sortPostsByDate(posts);
+  const container = await AstroContainer.create();
 
   const siteUrl = (
     SITE_URL ||
@@ -55,33 +57,37 @@ export async function GET(context: APIContext) {
       ? (sortedPosts[0].data.updatedDate ?? sortedPosts[0].data.pubDate).toUTCString()
       : new Date().toUTCString();
 
-  const itemsXml = sortedPosts
-    .map((post) => {
-      const postUrl = `${siteUrl}/posts/${encodeURI(post.id)}`;
-      const description =
-        post.data.description || getPlainExcerpt(post.body);
-      const contentHtml = sanitizeHtmlForRss(post.rendered?.html || '', siteUrl);
-      const categories = (post.data.tags || [])
-        .map((tag: string) => `      <category>${escapeXml(tag)}</category>`)
-        .join('\n');
+  const itemsXml = (
+    await Promise.all(
+      sortedPosts.map(async (post) => {
+        const postUrl = `${siteUrl}/posts/${encodeURI(post.id)}`;
+        const description =
+          post.data.description || getPlainExcerpt(post.body);
+        const { Content } = await render(post);
+        const renderedHtml = await container.renderToString(Content);
+        const contentHtml = sanitizeHtmlForRss(renderedHtml, siteUrl);
+        const categories = (post.data.tags || [])
+          .map((tag: string) => `      <category>${escapeXml(tag)}</category>`)
+          .join('\n');
 
-      return [
-        '    <item>',
-        `      <title>${escapeXml(post.data.title)}</title>`,
-        `      <link>${escapeXml(postUrl)}</link>`,
-        `      <guid isPermaLink="true">${escapeXml(postUrl)}</guid>`,
-        `      <description>${escapeXml(description)}</description>`,
-        contentHtml
-          ? `      <content:encoded>${wrapCdata(contentHtml)}</content:encoded>`
-          : '',
-        `      <pubDate>${post.data.pubDate.toUTCString()}</pubDate>`,
-        categories,
-        '    </item>',
-      ]
-        .filter(Boolean)
-        .join('\n');
-    })
-    .join('\n');
+        return [
+          '    <item>',
+          `      <title>${escapeXml(post.data.title)}</title>`,
+          `      <link>${escapeXml(postUrl)}</link>`,
+          `      <guid isPermaLink="true">${escapeXml(postUrl)}</guid>`,
+          `      <description>${escapeXml(description)}</description>`,
+          contentHtml
+            ? `      <content:encoded>${wrapCdata(contentHtml)}</content:encoded>`
+            : '',
+          `      <pubDate>${post.data.pubDate.toUTCString()}</pubDate>`,
+          categories,
+          '    </item>',
+        ]
+          .filter(Boolean)
+          .join('\n');
+      })
+    )
+  ).join('\n');
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
