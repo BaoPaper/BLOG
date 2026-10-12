@@ -2,7 +2,7 @@
 title: MC基岩版服务器开服指南
 description: 从租用云服务器到配置与启动 Minecraft 基岩版官方服务端的完整开服教程。
 pubDate: 2021-06-06 15:55:11
-tags: [我的世界, 教程]
+tags: [Linux]
 ---
 
 # MC基岩版开服教程

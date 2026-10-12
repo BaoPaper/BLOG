@@ -2,7 +2,7 @@
 title: 记一次个人导航页迁移
 description: 将个人导航页从 Flare 迁移至功能更丰富、内存占用更低的个人信息仪表盘 Glance。
 pubDate: 2025-03-22 15:11:52
-tags: [记录]
+tags: [工具]
 ---
 
 因为觉得功能简陋的原因将导航页系统从 [Flare](https://github.com/soulteary/docker-flare) 更换到了 [Glance](https://github.com/glanceapp/glance)。

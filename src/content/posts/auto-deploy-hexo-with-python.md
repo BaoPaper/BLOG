@@ -2,7 +2,7 @@
 title: 使用Python脚本自动部署Hexo
 description: 使用 Python 脚本监听文章目录变更并自动执行 Hexo 清理、生成与部署。
 pubDate: 2023-07-03 18:52:57
-tags: [教程, Python, 编程]
+tags: [工具]
 ---
 
 博主在使用Hexo编写博客时发现每次写完新的文章后都需要手动部署博客，十分的不方便，于是请教 ChatGPT 用 Python 写了一个简单的脚本来帮我部署博客，实测运行效果很好，代码如下：
