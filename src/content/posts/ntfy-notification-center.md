@@ -63,6 +63,6 @@ cache-file: "/var/cache/ntfy/cache.db"
 cache-duration: "96h"
 ```
 
-配置中留空部分需要填写，参考[官方文档](https://docs.ntfy.sh/config/#web-push)
+配置中留空部分需要填写，参考 [官方文档](https://docs.ntfy.sh/config/#web-push)
 
-配置完成后仅用一条 curl 命令即可推送/接受消息，用起来很方便，官方提供[全平台客户端](https://ntfy.sh/)
+配置完成后仅用一条 curl 命令即可推送/接受消息，用起来很方便，官方提供 [全平台客户端](https://ntfy.sh/)
