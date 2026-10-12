@@ -1,0 +1,45 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import PostsView from '../../../components/PostsView.astro';
+import { sortPostsByDate, getTagStats } from '../../../utils/posts';
+import { POSTS_PER_PAGE } from '../../../consts';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('posts');
+  const sortedPosts = sortPostsByDate(posts);
+  const { tagCounts, allTags } = getTagStats(sortedPosts);
+  const totalPages = Math.max(1, Math.ceil(sortedPosts.length / POSTS_PER_PAGE));
+
+  return Array.from({ length: totalPages }, (_, index) => {
+    const currentPage = index + 1;
+    return {
+      params: { page: String(currentPage) },
+      props: {
+        currentPage,
+        sortedPosts,
+        allTags,
+        tagCounts,
+      },
+    };
+  });
+}
+
+const { currentPage, sortedPosts, allTags, tagCounts } = Astro.props;
+
+if (currentPage === 1) {
+  return Astro.redirect('/posts');
+}
+---
+
+<BaseLayout
+  title={`文章 - 第 ${currentPage} 页`}
+  description={`所有文章列表 - 第 ${currentPage} 页`}
+>
+  <PostsView
+    posts={sortedPosts}
+    allTags={allTags}
+    tagCounts={tagCounts}
+    currentPage={currentPage}
+  />
+</BaseLayout>

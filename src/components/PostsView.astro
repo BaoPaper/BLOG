@@ -2,25 +2,58 @@
 import type { CollectionEntry } from 'astro:content';
 import PostItem from './PostItem.astro';
 import TagFilterBar from './TagFilterBar.astro';
+import { POSTS_PER_PAGE } from '../consts';
 
 interface Props {
   posts: CollectionEntry<'posts'>[];
   allTags: string[];
   tagCounts: Record<string, number>;
   activeTag?: string | null;
+  currentPage?: number;
+  pageSize?: number;
 }
 
-const { posts, allTags, tagCounts, activeTag = null } = Astro.props;
+const {
+  posts,
+  allTags,
+  tagCounts,
+  activeTag = null,
+  currentPage = 1,
+  pageSize = POSTS_PER_PAGE,
+} = Astro.props;
 
-const visiblePosts = activeTag
+const filteredPosts = activeTag
   ? posts.filter((post) => (post.data.tags || []).includes(activeTag))
   : posts;
+
+const totalPages = Math.max(1, Math.ceil(filteredPosts.length / pageSize));
+const startIndex = (currentPage - 1) * pageSize;
+const visiblePosts = filteredPosts.slice(startIndex, startIndex + pageSize);
+
+const basePath = activeTag ? `/tags/${encodeURIComponent(activeTag)}` : '/posts';
+const getPageUrl = (page: number) =>
+  page <= 1 ? basePath : `${basePath}/page/${page}`;
+
+function getPaginationItems(current: number, total: number): (number | 'ellipsis')[] {
+  if (total <= 5) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+  if (current <= 3) {
+    return [1, 2, 3, 4, 'ellipsis', total];
+  }
+  if (current >= total - 2) {
+    return [1, 'ellipsis', total - 3, total - 2, total - 1, total];
+  }
+  return [1, 'ellipsis', current - 1, current, current + 1, 'ellipsis', total];
+}
+
+const paginationItems = getPaginationItems(currentPage, totalPages);
 ---
 
 <div class="posts-page" id="posts-page">
   <header class="page-header">
     <h1 class="page-title">文章</h1>
-    <span class="posts-count" id="posts-count">共 {visiblePosts.length} 篇</span>
+    <span class="posts-count" id="posts-count">共 {filteredPosts.length} 篇</span>
   </header>
 
   <TagFilterBar
@@ -32,11 +65,67 @@ const visiblePosts = activeTag
 
   {
     visiblePosts.length > 0 ? (
-      <ul class="post-list" id="post-list">
-        {visiblePosts.map((post) => (
-          <PostItem post={post} activeTag={activeTag} />
-        ))}
-      </ul>
+      <>
+        <ul class="post-list" id="post-list">
+          {visiblePosts.map((post) => (
+            <PostItem post={post} activeTag={activeTag} />
+          ))}
+        </ul>
+
+        {totalPages > 1 && (
+          <nav class="pagination" aria-label="文章分页">
+            {currentPage > 1 ? (
+              <a
+                href={getPageUrl(currentPage - 1)}
+                class="page-link page-nav"
+                aria-label="上一页"
+              >
+                ← 上一页
+              </a>
+            ) : (
+              <span class="page-link page-nav disabled" aria-disabled="true">
+                ← 上一页
+              </span>
+            )}
+
+            <div class="page-numbers">
+              {paginationItems.map((item) =>
+                item === 'ellipsis' ? (
+                  <span class="page-ellipsis" aria-hidden="true">
+                    …
+                  </span>
+                ) : (
+                  <a
+                    href={getPageUrl(item)}
+                    class:list={['page-link', 'page-num', { active: item === currentPage }]}
+                    aria-current={item === currentPage ? 'page' : undefined}
+                  >
+                    {item}
+                  </a>
+                )
+              )}
+            </div>
+
+            <span class="page-indicator" aria-label={`第 ${currentPage} 页，共 ${totalPages} 页`}>
+              {currentPage} / {totalPages}
+            </span>
+
+            {currentPage < totalPages ? (
+              <a
+                href={getPageUrl(currentPage + 1)}
+                class="page-link page-nav"
+                aria-label="下一页"
+              >
+                下一页 →
+              </a>
+            ) : (
+              <span class="page-link page-nav disabled" aria-disabled="true">
+                下一页 →
+              </span>
+            )}
+          </nav>
+        )}
+      </>
     ) : (
       <div id="empty-state" class="empty-state">
         暂无该标签下的文章
@@ -73,10 +162,97 @@ const visiblePosts = activeTag
     gap: 1.5rem;
   }
 
+  .pagination {
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .page-numbers {
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    justify-content: center;
+    gap: 0.35rem;
+  }
+
+  .page-indicator {
+    display: none;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+    user-select: none;
+  }
+
+  .page-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.3rem 0.65rem;
+    border-radius: var(--radius-sm, 4px);
+    border: 1px solid var(--border);
+    background-color: var(--bg);
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    line-height: 1.4;
+    text-decoration: none;
+    white-space: nowrap;
+    flex-shrink: 0;
+    user-select: none;
+  }
+
+  .page-num {
+    min-width: 2rem;
+    padding: 0.3rem 0.5rem;
+    font-family: var(--font-mono);
+  }
+
+  a.page-link:hover {
+    color: var(--text);
+    background-color: var(--code-bg);
+    border-color: rgba(128, 128, 128, 0.35);
+    opacity: 1;
+  }
+
+  .page-link.active {
+    color: var(--text);
+    border-color: rgba(128, 128, 128, 0.4);
+    background-color: rgba(128, 128, 128, 0.14);
+    font-weight: 500;
+  }
+
+  .page-link.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .page-ellipsis {
+    padding: 0 0.25rem;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    user-select: none;
+  }
+
   .empty-state {
     margin: 3.5rem 0;
     text-align: center;
     color: var(--text-muted);
     font-size: 0.9rem;
+  }
+
+  @media (max-width: 520px) {
+    .page-numbers {
+      display: none;
+    }
+
+    .page-indicator {
+      display: inline-block;
+    }
   }
 </style>
