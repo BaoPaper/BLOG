@@ -10,9 +10,19 @@ const recentPosts = sortPostsByDate(posts).slice(0, 5);
 
 <BaseLayout title="首页">
   <section class="intro">
-    <h1 class="intro-title">你好，欢迎来到这里。</h1>
+    <h1 class="intro-title">
+      <img
+        src="/baopaper.svg"
+        alt="BaoPaper"
+        width="32"
+        height="32"
+        decoding="async"
+        class="intro-logo"
+      />
+      <span>你好，欢迎来到这里。</span>
+    </h1>
     <p class="intro-desc">
-      这是一个保持克制、专注于阅读体验的极简空间。记录思考、技术与生活。
+      我是豹纸嗷列巴「BaoPaper」，这里主要记录一些我的折腾记录，因为很多都是随笔所以很多文章都比较简略，所以其实更像一个日记本吧，博客名就是 Bao's Paper 哦！
     </p>
   </section>
 
@@ -34,10 +44,23 @@ const recentPosts = sortPostsByDate(posts).slice(0, 5);
   }
 
   .intro-title {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
     font-size: 1.4rem;
     font-weight: 600;
+    line-height: 1.35;
     margin-bottom: 0.75rem;
     letter-spacing: -0.01em;
+  }
+
+  .intro-logo {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background-color: var(--code-bg);
+    user-select: none;
   }
 
   .intro-desc {
