@@ -1,10 +1,16 @@
 ---
+interface Props {
+  showLabel?: boolean;
+  class?: string;
+}
+
+const { showLabel = false, class: className } = Astro.props;
 ---
 
 <button
   type="button"
   id="theme-toggle"
-  class="theme-toggle"
+  class:list={['theme-toggle', className]}
   aria-label="切换浅色/深色模式"
   title="切换主题"
 >
@@ -12,8 +18,8 @@
   <svg
     class="theme-icon icon-sun"
     xmlns="http://www.w3.org/2000/svg"
-    width="18"
-    height="18"
+    width="16"
+    height="16"
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
@@ -36,8 +42,8 @@
   <svg
     class="theme-icon icon-moon"
     xmlns="http://www.w3.org/2000/svg"
-    width="18"
-    height="18"
+    width="16"
+    height="16"
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
@@ -47,6 +53,7 @@
   >
     <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
   </svg>
+  {showLabel && <span class="theme-label">切换主题</span>}
 </button>
 
 <style>
@@ -69,6 +76,7 @@
 
   .theme-icon {
     display: none;
+    flex-shrink: 0;
   }
 
   /* 默认浅色 */

@@ -29,34 +29,101 @@ const isCurrent = (path: string) => {
       <a href="/posts" class:list={[{ active: isCurrent('/posts') }]}>文章</a>
     </nav>
 
-    <!-- 右侧：RSS 订阅复制与浅色/深色模式切换 -->
+    <!-- 右侧：汉堡功能菜单（友链、RSS 订阅、主题切换） -->
     <div class="nav-actions">
-      <button
-        type="button"
-        id="rss-copy-btn"
-        class="action-btn"
-        aria-label="复制 RSS 订阅地址"
-        title="复制 RSS 订阅地址"
-      >
-        <svg
-          class="rss-icon"
-          xmlns="http://www.w3.org/2000/svg"
-          width="18"
-          height="18"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.8"
-          stroke-linecap="round"
-          stroke-linejoin="round"
+      <details class="action-menu" id="action-menu">
+        <summary
+          class="menu-trigger"
+          aria-label="打开功能菜单"
+          title="功能菜单"
         >
-          <path d="M4 11a9 9 0 0 1 9 9"></path>
-          <path d="M4 4a16 16 0 0 1 16 16"></path>
-          <circle cx="5" cy="19" r="1"></circle>
-        </svg>
-        <span class="rss-copied-text">已复制</span>
-      </button>
-      <ThemeToggle />
+          <svg
+            class="menu-icon icon-open"
+            xmlns="http://www.w3.org/2000/svg"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <line x1="4" y1="6" x2="20" y2="6"></line>
+            <line x1="4" y1="12" x2="20" y2="12"></line>
+            <line x1="4" y1="18" x2="20" y2="18"></line>
+          </svg>
+          <svg
+            class="menu-icon icon-close"
+            xmlns="http://www.w3.org/2000/svg"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </summary>
+
+        <div class="menu-dropdown" role="menu">
+          <a
+            href="/friends"
+            class:list={['menu-item', { active: isCurrent('/friends') }]}
+            role="menuitem"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+            </svg>
+            <span>友链</span>
+          </a>
+
+          <button
+            type="button"
+            id="rss-copy-btn"
+            class="menu-item"
+            role="menuitem"
+            aria-label="复制 RSS 订阅地址"
+            title="复制 RSS 订阅地址"
+          >
+            <svg
+              class="rss-icon"
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M4 11a9 9 0 0 1 9 9"></path>
+              <path d="M4 4a16 16 0 0 1 16 16"></path>
+              <circle cx="5" cy="19" r="1"></circle>
+            </svg>
+            <span class="rss-label">RSS 订阅</span>
+            <span class="rss-copied-text">已复制</span>
+          </button>
+
+          <ThemeToggle showLabel={true} class="menu-item" />
+        </div>
+      </details>
     </div>
   </div>
 </header>
@@ -117,40 +184,122 @@ const isCurrent = (path: string) => {
     justify-self: end;
     display: flex;
     align-items: center;
-    gap: 0.65rem;
   }
 
-  .action-btn {
+  .action-menu {
+    position: relative;
+  }
+
+  .menu-trigger {
+    list-style: none;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.3rem;
     background: transparent;
     border: none;
     cursor: pointer;
-    padding: 0.2rem;
+    padding: 0.3rem;
     border-radius: var(--radius-sm, 4px);
     color: var(--text-muted);
-    font-family: var(--font-sans);
-    line-height: 1;
+    line-height: 0;
+    user-select: none;
   }
 
-  .action-btn:hover {
+  .menu-trigger::-webkit-details-marker {
+    display: none;
+  }
+
+  .menu-trigger:hover,
+  .action-menu[open] .menu-trigger {
     color: var(--text);
+    background-color: var(--code-bg);
+  }
+
+  .icon-close {
+    display: none;
+  }
+
+  .action-menu[open] .icon-open {
+    display: none;
+  }
+
+  .action-menu[open] .icon-close {
+    display: block;
+  }
+
+  .menu-dropdown {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 0.5rem);
+    min-width: 136px;
+    padding: 0.35rem;
+    background-color: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius, 8px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    z-index: 60;
+  }
+
+  :global([data-theme="dark"]) .menu-dropdown {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :global(:root:not([data-theme="light"])) .menu-dropdown {
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+  }
+
+  .menu-dropdown :global(.menu-item) {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.55rem;
+    width: 100%;
+    padding: 0.45rem 0.6rem;
+    border: none;
+    border-radius: var(--radius-sm, 4px);
+    background: transparent;
+    color: var(--text-muted);
+    font-family: var(--font-sans);
+    font-size: 0.85rem;
+    line-height: 1.3;
+    cursor: pointer;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .menu-dropdown :global(.menu-item:hover),
+  .menu-dropdown :global(.menu-item.active) {
+    color: var(--text);
+    background-color: var(--code-bg);
+    opacity: 1;
+  }
+
+  .menu-dropdown :global(.menu-item.active) {
+    font-weight: 500;
+  }
+
+  .menu-dropdown :global(.menu-item svg) {
+    flex-shrink: 0;
   }
 
   .rss-copied-text {
     display: none;
-    font-size: 0.75rem;
-    color: var(--text);
-    user-select: none;
   }
 
-  .action-btn.copied {
+  .menu-item.copied {
     color: var(--text);
   }
 
-  .action-btn.copied .rss-copied-text {
+  .menu-item.copied .rss-label {
+    display: none;
+  }
+
+  .menu-item.copied .rss-copied-text {
     display: inline;
   }
 </style>
@@ -158,40 +307,80 @@ const isCurrent = (path: string) => {
 <script>
   let rssCopyTimer: number | null = null;
 
-  function setupRssCopy() {
+  function setupHeaderActions() {
+    const menu = document.getElementById('action-menu') as HTMLDetailsElement | null;
     const btn = document.getElementById('rss-copy-btn') as HTMLButtonElement | null;
-    if (!btn || btn.dataset.rssInitialized) return;
-    btn.dataset.rssInitialized = 'true';
 
-    btn.addEventListener('click', async () => {
-      const rssUrl = `${window.location.origin}/rss.xml`;
-      try {
-        await navigator.clipboard.writeText(rssUrl);
-        btn.classList.add('copied');
-        btn.setAttribute('title', '已复制 RSS 订阅地址');
-        btn.setAttribute('aria-label', '已复制 RSS 订阅地址');
+    if (btn && !btn.dataset.rssInitialized) {
+      btn.dataset.rssInitialized = 'true';
 
-        if (rssCopyTimer) {
-          clearTimeout(rssCopyTimer);
+      btn.addEventListener('click', async () => {
+        const rssUrl = `${window.location.origin}/rss.xml`;
+        try {
+          await navigator.clipboard.writeText(rssUrl);
+          btn.classList.add('copied');
+          btn.setAttribute('title', '已复制 RSS 订阅地址');
+          btn.setAttribute('aria-label', '已复制 RSS 订阅地址');
+
+          if (rssCopyTimer) {
+            clearTimeout(rssCopyTimer);
+          }
+
+          rssCopyTimer = window.setTimeout(() => {
+            btn.classList.remove('copied');
+            btn.setAttribute('title', '复制 RSS 订阅地址');
+            btn.setAttribute('aria-label', '复制 RSS 订阅地址');
+            rssCopyTimer = null;
+          }, 2000);
+        } catch (err) {
+          console.error('复制 RSS 订阅地址失败:', err);
         }
+      });
+    }
 
-        rssCopyTimer = window.setTimeout(() => {
-          btn.classList.remove('copied');
-          btn.setAttribute('title', '复制 RSS 订阅地址');
-          btn.setAttribute('aria-label', '复制 RSS 订阅地址');
-          rssCopyTimer = null;
-        }, 2000);
-      } catch (err) {
-        console.error('复制 RSS 订阅地址失败:', err);
+    if (menu && !menu.dataset.menuInitialized) {
+      menu.dataset.menuInitialized = 'true';
+
+      menu.querySelectorAll('a').forEach((link) => {
+        link.addEventListener('click', () => {
+          menu.removeAttribute('open');
+        });
+      });
+    }
+  }
+
+  if (!(window as any).__headerMenuGlobalListeners) {
+    (window as any).__headerMenuGlobalListeners = true;
+
+    document.addEventListener('click', (e) => {
+      const menu = document.getElementById('action-menu') as HTMLDetailsElement | null;
+      if (menu && menu.hasAttribute('open') && !menu.contains(e.target as Node)) {
+        menu.removeAttribute('open');
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const menu = document.getElementById('action-menu') as HTMLDetailsElement | null;
+        if (menu && menu.hasAttribute('open')) {
+          menu.removeAttribute('open');
+        }
+      }
+    });
+
+    document.addEventListener('astro:before-preparation', () => {
+      const menu = document.getElementById('action-menu') as HTMLDetailsElement | null;
+      if (menu) {
+        menu.removeAttribute('open');
       }
     });
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', setupRssCopy);
+    document.addEventListener('DOMContentLoaded', setupHeaderActions);
   } else {
-    setupRssCopy();
+    setupHeaderActions();
   }
-  document.addEventListener('astro:after-swap', setupRssCopy);
-  document.addEventListener('astro:page-load', setupRssCopy);
+  document.addEventListener('astro:after-swap', setupHeaderActions);
+  document.addEventListener('astro:page-load', setupHeaderActions);
 </script>

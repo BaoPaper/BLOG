@@ -1,0 +1,142 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { FRIEND_LINKS } from '../consts';
+---
+
+<BaseLayout title="友链" description="友情链接">
+  <div class="friends-page">
+    <header class="page-header">
+      <h1 class="page-title">友链</h1>
+      <span class="friends-count">共 {FRIEND_LINKS.length} 位</span>
+    </header>
+
+    {
+      FRIEND_LINKS.length > 0 ? (
+        <ul class="friends-list">
+          {FRIEND_LINKS.map((friend) => (
+            <li class="friend-item">
+              <a
+                href={friend.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="friend-card"
+              >
+                <img
+                  src={friend.avatar}
+                  alt={friend.title}
+                  width="48"
+                  height="48"
+                  loading="lazy"
+                  decoding="async"
+                  class="friend-avatar"
+                />
+                <div class="friend-info">
+                  <span class="friend-title">{friend.title}</span>
+                  <p class="friend-intro">{friend.intro}</p>
+                </div>
+              </a>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <div class="empty-state">暂无友链</div>
+      )
+    }
+  </div>
+</BaseLayout>
+
+<style>
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .page-title {
+    font-size: 1.4rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  .friends-count {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+
+  .friends-list {
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+  }
+
+  .friend-card {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    padding: 0.9rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius, 8px);
+    background-color: var(--bg);
+    text-decoration: none;
+    min-width: 0;
+  }
+
+  .friend-card:hover {
+    background-color: var(--code-bg);
+    border-color: rgba(128, 128, 128, 0.32);
+    opacity: 1;
+  }
+
+  .friend-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    background-color: var(--code-bg);
+    border: 1px solid var(--border);
+  }
+
+  .friend-info {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .friend-title {
+    display: block;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--text);
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .friend-intro {
+    margin-top: 0.2rem;
+    font-size: 0.825rem;
+    color: var(--text-muted);
+    line-height: 1.45;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .empty-state {
+    margin: 3.5rem 0;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+  }
+
+  @media (max-width: 560px) {
+    .friends-list {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
