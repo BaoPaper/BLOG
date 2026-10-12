@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const FAVICON_DIR = path.resolve(process.cwd(), 'public/favicons');
 const failedDomains = new Set();
@@ -62,7 +63,7 @@ export async function getOrFetchFavicon(hostname) {
     try {
       const sourceUrl = `https://icons.duckduckgo.com/ip3/${hostname}.ico`;
       const response = await fetch(sourceUrl, {
-        signal: AbortSignal.timeout(4000),
+        signal: AbortSignal.timeout(10000),
         headers: {
           'User-Agent': 'Mozilla/5.0 (compatible; BlogFaviconFetcher/1.0)',
         },
@@ -92,3 +93,73 @@ export async function getOrFetchFavicon(hostname) {
   pendingRequests.set(hostname, fetchPromise);
   return fetchPromise;
 }
+
+/**
+ * Astro 集成：确保即便命中 Astro 内容层缓存（跳过 Markdown 重编译），
+ * 构建与开发时也会自动检查并补齐所有缺失的 Favicon 图标文件。
+ */
+export function faviconCacheIntegration() {
+  return {
+    name: 'favicon-cache-sync',
+    hooks: {
+      'astro:server:setup': ({ server }) => {
+        server.middlewares.use(async (req, _res, next) => {
+          const match = req.url?.match(/^\/favicons\/([a-zA-Z0-9._-]+)\.ico$/);
+          if (match) {
+            await getOrFetchFavicon(match[1]);
+          }
+          next();
+        });
+      },
+      'astro:build:done': async ({ dir }) => {
+        const distDir = fileURLToPath(dir);
+        const htmlFiles = [];
+
+        function walk(currentDir) {
+          if (!fs.existsSync(currentDir)) return;
+          for (const entry of fs.readdirSync(currentDir, { withFileTypes: true })) {
+            const fullPath = path.join(currentDir, entry.name);
+            if (entry.isDirectory()) {
+              walk(fullPath);
+            } else if (entry.name.endsWith('.html')) {
+              htmlFiles.push(fullPath);
+            }
+          }
+        }
+
+        walk(distDir);
+
+        const hostnames = new Set();
+        const faviconRegex = /\/favicons\/([a-zA-Z0-9._-]+)\.ico/g;
+
+        for (const htmlFile of htmlFiles) {
+          const content = fs.readFileSync(htmlFile, 'utf-8');
+          let match;
+          while ((match = faviconRegex.exec(content)) !== null) {
+            hostnames.add(match[1]);
+          }
+        }
+
+        if (hostnames.size === 0) return;
+
+        const distFaviconDir = path.join(distDir, 'favicons');
+        if (!fs.existsSync(distFaviconDir)) {
+          fs.mkdirSync(distFaviconDir, { recursive: true });
+        }
+
+        await Promise.all(
+          Array.from(hostnames).map(async (hostname) => {
+            const result = await getOrFetchFavicon(hostname);
+            if (!result) return;
+            const srcFile = path.join(FAVICON_DIR, `${sanitizeHostname(hostname)}.ico`);
+            const destFile = path.join(distFaviconDir, `${sanitizeHostname(hostname)}.ico`);
+            if (fs.existsSync(srcFile)) {
+              fs.copyFileSync(srcFile, destFile);
+            }
+          })
+        );
+      },
+    },
+  };
+}
+
