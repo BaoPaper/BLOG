@@ -39,26 +39,55 @@ const pageTitle =
 
     <script is:inline>
       (function () {
-        function getTheme() {
+        function getPreference() {
           try {
-            if (typeof localStorage !== 'undefined' && localStorage.getItem('theme')) {
-              return localStorage.getItem('theme');
+            var stored = localStorage.getItem('theme');
+            if (stored === 'light' || stored === 'dark' || stored === 'auto') {
+              return stored;
             }
-          } catch {}
-          if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-            return 'dark';
-          }
-          return 'light';
+          } catch (e) {}
+          return 'auto';
         }
 
-        document.documentElement.setAttribute('data-theme', getTheme());
+        function resolveTheme(preference) {
+          if (preference === 'light') return 'light';
+          if (preference === 'dark') return 'dark';
+          return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
 
+        function applyTheme() {
+          var pref = getPreference();
+          var resolved = resolveTheme(pref);
+          document.documentElement.setAttribute('data-theme-preference', pref);
+          document.documentElement.setAttribute('data-theme', resolved);
+        }
+
+        applyTheme();
+
+        // 监听系统主题变化：在偏好为 auto 时即时跟随
+        if (!window.__themeMediaListenerInitialized) {
+          window.__themeMediaListenerInitialized = true;
+          var mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+          mediaQuery.addEventListener('change', function (e) {
+            var pref = document.documentElement.getAttribute('data-theme-preference') || 'auto';
+            if (pref === 'auto') {
+              document.documentElement.setAttribute('data-theme', e.matches ? 'dark' : 'light');
+            }
+          });
+        }
+
+        // Astro 页面过渡（ClientRouter）时保持主题属性
         if (!window.__themeTransitionInitialized) {
           window.__themeTransitionInitialized = true;
           document.addEventListener('astro:before-swap', function (e) {
-            const currentTheme =
-              document.documentElement.getAttribute('data-theme') || getTheme();
-            e.newDocument.documentElement.setAttribute('data-theme', currentTheme);
+            var currentTheme = document.documentElement.getAttribute('data-theme');
+            var currentPref = document.documentElement.getAttribute('data-theme-preference');
+            if (currentTheme) {
+              e.newDocument.documentElement.setAttribute('data-theme', currentTheme);
+            }
+            if (currentPref) {
+              e.newDocument.documentElement.setAttribute('data-theme-preference', currentPref);
+            }
           });
         }
       })();

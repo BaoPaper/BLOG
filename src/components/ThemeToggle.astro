@@ -9,12 +9,29 @@ const { showLabel = false, class: className } = Astro.props;
 
 <button
   type="button"
-  id="theme-toggle"
   class:list={['theme-toggle', className]}
-  aria-label="切换浅色/深色模式"
-  title="切换主题"
+  aria-label="当前主题：跟随系统，点击切换浅色模式"
+  title="主题：跟随系统（点击切换为浅色）"
 >
-  <!-- 太阳图标 (在深色模式下显示，点击切换为浅色) -->
+  <!-- 跟随系统图标 (Monitor) -->
+  <svg
+    class="theme-icon icon-auto"
+    xmlns="http://www.w3.org/2000/svg"
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.8"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <rect width="20" height="14" x="2" y="3" rx="2"></rect>
+    <line x1="8" x2="16" y1="21" y2="21"></line>
+    <line x1="12" x2="12" y1="17" y2="21"></line>
+  </svg>
+
+  <!-- 浅色图标 (Sun) -->
   <svg
     class="theme-icon icon-sun"
     xmlns="http://www.w3.org/2000/svg"
@@ -38,7 +55,7 @@ const { showLabel = false, class: className } = Astro.props;
     <path d="m19.07 4.93-1.41 1.41"></path>
   </svg>
 
-  <!-- 月亮图标 (在浅色模式下显示，点击切换为深色) -->
+  <!-- 深色图标 (Moon) -->
   <svg
     class="theme-icon icon-moon"
     xmlns="http://www.w3.org/2000/svg"
@@ -53,7 +70,14 @@ const { showLabel = false, class: className } = Astro.props;
   >
     <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
   </svg>
-  {showLabel && <span class="theme-label">切换主题</span>}
+
+  {showLabel && (
+    <span class="theme-label">
+      <span class="label-text label-auto">跟随系统</span>
+      <span class="label-text label-light">浅色模式</span>
+      <span class="label-text label-dark">深色模式</span>
+    </span>
+  )}
 </button>
 
 <style>
@@ -79,66 +103,124 @@ const { showLabel = false, class: className } = Astro.props;
     flex-shrink: 0;
   }
 
-  /* 默认浅色 */
-  .icon-moon {
-    display: block;
-  }
-
-  .icon-sun {
+  .label-text {
     display: none;
   }
 
-  /* 深色属性 */
-  :global([data-theme="dark"]) .icon-moon {
+  /* 默认与 Auto 偏好 */
+  .icon-auto {
+    display: block;
+  }
+  .label-auto {
+    display: inline;
+  }
+
+  :global(html[data-theme-preference="auto"]) .icon-auto {
+    display: block;
+  }
+  :global(html[data-theme-preference="auto"]) .icon-sun,
+  :global(html[data-theme-preference="auto"]) .icon-moon {
+    display: none;
+  }
+  :global(html[data-theme-preference="auto"]) .label-auto {
+    display: inline;
+  }
+  :global(html[data-theme-preference="auto"]) .label-light,
+  :global(html[data-theme-preference="auto"]) .label-dark {
     display: none;
   }
 
-  :global([data-theme="dark"]) .icon-sun {
+  /* 浅色模式 */
+  :global(html[data-theme-preference="light"]) .icon-sun {
     display: block;
   }
-
-  :global([data-theme="light"]) .icon-moon {
-    display: block;
+  :global(html[data-theme-preference="light"]) .icon-auto,
+  :global(html[data-theme-preference="light"]) .icon-moon {
+    display: none;
   }
-
-  :global([data-theme="light"]) .icon-sun {
+  :global(html[data-theme-preference="light"]) .label-light {
+    display: inline;
+  }
+  :global(html[data-theme-preference="light"]) .label-auto,
+  :global(html[data-theme-preference="light"]) .label-dark {
     display: none;
   }
 
-  /* 媒体查询备用 */
-  @media (prefers-color-scheme: dark) {
-    :global(:root:not([data-theme="light"])) .icon-moon {
-      display: none;
-    }
-    :global(:root:not([data-theme="light"])) .icon-sun {
-      display: block;
-    }
+  /* 深色模式 */
+  :global(html[data-theme-preference="dark"]) .icon-moon {
+    display: block;
+  }
+  :global(html[data-theme-preference="dark"]) .icon-auto,
+  :global(html[data-theme-preference="dark"]) .icon-sun {
+    display: none;
+  }
+  :global(html[data-theme-preference="dark"]) .label-dark {
+    display: inline;
+  }
+  :global(html[data-theme-preference="dark"]) .label-auto,
+  :global(html[data-theme-preference="dark"]) .label-light {
+    display: none;
   }
 </style>
 
 <script>
-  function setupThemeToggle() {
-    const toggle = document.getElementById('theme-toggle');
-    if (!toggle || toggle.dataset.toggleInitialized) return;
-    toggle.dataset.toggleInitialized = 'true';
+  function updateThemeAria() {
+    const pref = document.documentElement.getAttribute('data-theme-preference') || 'auto';
+    const toggles = document.querySelectorAll('.theme-toggle');
 
-    toggle.addEventListener('click', () => {
-      const currentTheme = document.documentElement.getAttribute('data-theme');
-      const isDark = currentTheme
-        ? currentTheme === 'dark'
-        : window.matchMedia('(prefers-color-scheme: dark)').matches;
-
-      const nextTheme = isDark ? 'light' : 'dark';
-
-      document.documentElement.setAttribute('data-theme', nextTheme);
-
-      try {
-        localStorage.setItem('theme', nextTheme);
-      } catch {}
+    toggles.forEach((toggle) => {
+      if (pref === 'auto') {
+        toggle.setAttribute('title', '主题：跟随系统（点击切换为浅色）');
+        toggle.setAttribute('aria-label', '当前主题：跟随系统，点击切换浅色模式');
+      } else if (pref === 'light') {
+        toggle.setAttribute('title', '主题：浅色模式（点击切换为深色）');
+        toggle.setAttribute('aria-label', '当前主题：浅色模式，点击切换深色模式');
+      } else {
+        toggle.setAttribute('title', '主题：深色模式（点击切换为跟随系统）');
+        toggle.setAttribute('aria-label', '当前主题：深色模式，点击切换跟随系统');
+      }
     });
   }
 
-  // 初次加载与视图切换支持
+  function handleThemeClick() {
+    const currentPref = document.documentElement.getAttribute('data-theme-preference') || 'auto';
+    let nextPref: 'auto' | 'light' | 'dark' = 'auto';
+
+    if (currentPref === 'auto') {
+      nextPref = 'light';
+    } else if (currentPref === 'light') {
+      nextPref = 'dark';
+    } else {
+      nextPref = 'auto';
+    }
+
+    const resolvedTheme =
+      nextPref === 'auto'
+        ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+        : nextPref;
+
+    document.documentElement.setAttribute('data-theme-preference', nextPref);
+    document.documentElement.setAttribute('data-theme', resolvedTheme);
+
+    try {
+      localStorage.setItem('theme', nextPref);
+    } catch {}
+
+    updateThemeAria();
+  }
+
+  function setupThemeToggle() {
+    const toggles = document.querySelectorAll('.theme-toggle');
+    toggles.forEach((toggle) => {
+      const htmlEl = toggle as HTMLElement;
+      if (htmlEl.dataset.toggleInitialized) return;
+      htmlEl.dataset.toggleInitialized = 'true';
+      htmlEl.addEventListener('click', handleThemeClick);
+    });
+
+    updateThemeAria();
+  }
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', setupThemeToggle);
   } else {
