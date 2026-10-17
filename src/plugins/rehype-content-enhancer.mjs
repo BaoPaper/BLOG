@@ -1,4 +1,4 @@
-import { getOrFetchFavicon } from './favicon-cache.mjs';
+import { faviconPublicPath } from './favicon-cache.mjs';
 
 const LANG_MAP = {
   js: 'JavaScript',
@@ -303,31 +303,25 @@ export function rehypeContentEnhancer() {
       }
     });
 
-    // 构建时并发拉取与私有化 Favicon，并注入到节点中
-    if (externalLinkTasks.length > 0) {
-      await Promise.all(
-        externalLinkTasks.map(async ({ node, hostname }) => {
-          const localFavicon = await getOrFetchFavicon(hostname);
-          if (localFavicon) {
-            const faviconNode = {
-              type: 'element',
-              tagName: 'img',
-              properties: {
-                className: ['link-favicon'],
-                src: localFavicon,
-                alt: '',
-                width: '14',
-                height: '14',
-                loading: 'lazy',
-                decoding: 'async',
-                'aria-hidden': 'true',
-              },
-              children: [],
-            };
-            node.children = [faviconNode, ...(node.children || [])];
-          }
-        })
-      );
+    // 站外链接始终静态输出图标节点：图标文件由 faviconCacheIntegration 在开发/构建阶段
+    // 统一抓取并校验，缺失或抓取失败会直接报错（构建退出非 0），不会静默输出无图标页面
+    for (const { node, hostname } of externalLinkTasks) {
+      const faviconNode = {
+        type: 'element',
+        tagName: 'img',
+        properties: {
+          className: ['link-favicon'],
+          src: faviconPublicPath(hostname),
+          alt: '',
+          width: '14',
+          height: '14',
+          loading: 'lazy',
+          decoding: 'async',
+          'aria-hidden': 'true',
+        },
+        children: [],
+      };
+      node.children = [faviconNode, ...(node.children || [])];
     }
   };
 }
